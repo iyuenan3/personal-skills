@@ -33,7 +33,7 @@
 ## 安装
 
 ```bash
-git clone <repo-url> ~/.claude/skills/aireadme
+git clone https://github.com/iyuenan3/aireadme-skill.git ~/.claude/skills/aireadme
 ```
 
 即把本仓库放到 `~/.claude/skills/aireadme/`，Claude Code 会自动识别该 skill。
