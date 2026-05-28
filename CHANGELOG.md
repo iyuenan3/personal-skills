@@ -4,6 +4,16 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-05-28: v0.3 加入 story-writer
+
+### Added
+
+- 新增 `story-writer/` skill（短篇小说创作，番茄小说平台 7000-10000 字）
+  - 从已废弃的 `iyuenan3/OpenClaw-Customize-Skills` 仓迁入（该仓 2026-03-28 创建，2026-04-07 后未再活动，已 GitHub 删除）
+  - SKILL.md 早期已被改造成 Claude Code skill 格式（`name:` / `description:` frontmatter），迁移时无需 port
+  - 同仓另两个 OpenClaw 时代 skill（moltbook-daily / wordpress-blog-writer）因 Maxwell 不再使用且代码不保留而未迁入
+- 新增 `story-writer/README.md`（简介 + 触发词 + 工作流 + 资源说明 + 迁入历史）
+
 ## 2026-05-28: v0.2 monorepo 化
 
 ### Changed

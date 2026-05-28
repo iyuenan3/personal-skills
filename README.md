@@ -7,6 +7,7 @@ Maxwell 的 [Claude Code](https://claude.com/claude-code) skill 合集。
 | skill | 定位 | 受众 |
 |---|---|---|
 | [`aireadme/`](aireadme/) | AI-native 跨项目文档体系（12 文件 + 三模式 + lint） | 通用 |
+| [`story-writer/`](story-writer/) | 短篇小说创作 skill（番茄小说平台，7000-10000 字） | 通用 |
 | [`worklog-ingest/`](worklog-ingest/) | 个人 worklog 知识库自主 ingest agent | Maxwell 专属（参考性公开） |
 
 ## 安装
@@ -21,6 +22,14 @@ cp -r personal-skills/aireadme ~/.claude/skills/
 ```
 
 详细用法见 [`aireadme/README.md`](aireadme/README.md)。
+
+### story-writer（通用）
+
+```bash
+cp -r personal-skills/story-writer ~/.claude/skills/
+```
+
+触发词：「写小说」「写短故事」「写故事」「创作小说」「创作故事」「番茄小说」「短篇小说」。详细用法见 [`story-writer/README.md`](story-writer/README.md)。
 
 ### worklog-ingest（个人 skill）
 
@@ -38,6 +47,7 @@ personal-skills/
 ├── LICENSE             # Apache-2.0（全仓共用）
 ├── CHANGELOG.md        # monorepo 顶层 changelog（仓改名 + skill 增减里程碑）
 ├── aireadme/           # AI-native 跨项目文档体系 skill
+├── story-writer/       # 短篇小说创作 skill（番茄小说平台）
 └── worklog-ingest/     # 个人 worklog ingest agent skill
 ```
 
@@ -45,7 +55,9 @@ personal-skills/
 
 ## 历史
 
-本仓从 `aireadme-skill` rename 而来（2026-05-25 首发 aireadme v0.1，2026-05-28 monorepo 化）。老 URL `github.com/iyuenan3/aireadme-skill` 仍自动 redirect 到本仓，clone 不会失败。
+- **2026-05-25** 仓首发，仓名 `aireadme-skill`，首个 skill = aireadme v0.1
+- **2026-05-28** monorepo 化 + rename 为 `personal-skills`，加入 `worklog-ingest`（老 URL `aireadme-skill` GitHub 永久 redirect）
+- **2026-05-28** 加入 `story-writer`（从已删除的 `iyuenan3/OpenClaw-Customize-Skills` 仓迁入）
 
 ## License
 
