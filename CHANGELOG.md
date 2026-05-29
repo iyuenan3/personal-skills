@@ -4,6 +4,17 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-05-29: v0.4 加入 stash
+
+### Added
+
+- 新增 `stash/` skill（对话记忆持久化到项目 memory 目录 + MEMORY.md 索引 + check.sh 校验）
+  - 从全局单文件 command（`~/.claude/commands/stash.md`）升级为 skill（三件套 SKILL + MEMORY_SPEC + check.sh），老 command 已删
+  - 收益：记忆规范抽成 `MEMORY_SPEC.md` 单一真相源（告别 command prompt 复述漂移）+ check.sh 机械校验
+  - 经两轮 subagent review（一轮静态审 bash + 二轮实战 dry-run / 对抗，共 17 findings 修 16）
+  - 规范贴合 Claude Code harness 注入的 `# Memory` 段 + 两处本地特化（name 带 type 前缀 / 索引分隔符全角冒号）
+- 新增 `stash/README.md`
+
 ## 2026-05-28: v0.3 加入 story-writer
 
 ### Added
