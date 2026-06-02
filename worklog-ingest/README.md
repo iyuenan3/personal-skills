@@ -23,7 +23,7 @@ worklog（Maxwell 的个人知识库系统，基于 Karpathy LLM Wiki 三层架�
 包含以下 Maxwell 专属 hardcode：
 
 - **个人 memory 路径**：`~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/`
-- **远程协作机**：Yuan-MBP 的 SSH 别名、特定项目路径（金融投研客户机器）
+- **远程协作机**：远程机的 SSH 别名、特定项目路径（客户机器）
 - **个人项目清单**：Maxwell 的 `~/Desktop/Claude-Project/` 下 10 个项目
 - **求职决策规则**：三档薪资 / 个人偏好城市 / Web3 灰色框架
 - **个人写作规范**：不用破折号、中文全角标点、不脑补、不臆造
@@ -44,7 +44,7 @@ worklog（Maxwell 的个人知识库系统，基于 Karpathy LLM Wiki 三层架�
 参考 [`SKILL.md`](SKILL.md) 结构，替换所有 hardcode。搜索以下关键词全部需要换：
 
 - `~/.claude/projects/` / `~/Desktop/Claude-Project/` / `WORKLOG=` 等本机路径
-- `Yuan-MBP` / `cfr` / 远程机相关
+- `cfr-host` / `cfr-project-path` / `cfr` / 远程机相关
 - `worklog` / `karpathy` / 知识库结构相关
 - `frontmatter` / `wikilink` 等 Obsidian vault 相关
 - 求职 / 项目命名 / 写作规范等个人偏好

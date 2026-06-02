@@ -1,6 +1,6 @@
 ---
 name: worklog-ingest
-description: worklog 自主 ingest agent。用户说「记录今天 / 记录昨天 / 记录 5 月 X 日 / 补充今天 / 更新日记」时触发,把一天散乱的工作素材(本地 git log + Yuan-MBP cfr SSH + memory + wiki 改动 + 用户 brain-dump)编译成结构化日记 + 更新 wiki + TODO 盘点 + commit + push,全程自主无需人盯,只在启动时向用户一次性收集本机扫不到的补充信息。
+description: worklog 自主 ingest agent。用户说「记录今天 / 记录昨天 / 记录 5 月 X 日 / 补充今天 / 更新日记」时触发,把一天散乱的工作素材(本地 git log + 远程机 cfr SSH + memory + wiki 改动 + 用户 brain-dump)编译成结构化日记 + 更新 wiki + TODO 盘点 + commit + push,全程自主无需人盯,只在启动时向用户一次性收集本机扫不到的补充信息。
 ---
 
 # worklog-ingest
@@ -59,7 +59,9 @@ Step E: 终端打印完成清单 / 错误状态
 
 ### A.0: 主动 Read 关键 memory(skill 触发时必读)
 
-skill 一上来先 Read 下列 8 个 memory(直接影响 ingest 质量的 **essential subset**;完整关联清单见文末「关联」段):
+分两类读: **① 静态质量基线(与具体项目无关,一上来就读) + ② 动态项目 memory(随活跃项目自动适配,新增项目无需改本清单)**。
+
+**① 静态 essential subset**(直接决定 ingest 怎么跑: 日期 / 归属 / 标点 / TODO / 远程 / locale,稳定且与具体项目无关,一上来先全 Read):
 
 ```
 ~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/feedback_stash_date_alignment.md
@@ -71,6 +73,16 @@ skill 一上来先 Read 下列 8 个 memory(直接影响 ingest 质量的 **esse
 ~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/feedback_claude_financial_research_git_log.md
 ~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/reference_macos_grep_locale.md
 ```
+
+> 这 8 个是「上来必读全文」的**下限不是上限**。完整 feedback / reference 索引在每会话已注入的 `MEMORY.md` 里,新增的 workflow feedback 自动进 MEMORY.md,按需补读。
+
+**② 动态项目 memory**(解决「常新增项目,固定清单必漏」):
+
+A.1 扫描拿到「本窗口有 commit 的活跃项目」后,对每个活跃 slug,**在已注入的 `MEMORY.md` 索引里找到对应的 `project_*.md`(Project 段链接 / 标题含该 slug)并 Read**:
+
+- 映射**不是机械的**,别拼 `project_<slug>.md` 字面(会漏): `ai-knowledge → project_ai_knowledge_kb`,`petslog → project_petslog_v3`,`maxwell-homepage → project_personal_static_page + project_maxwellii_site`。一律走 MEMORY.md 索引匹配。
+- 读到的项目约束(定位 / 敏感数据红线 / 下一步)在 D.1 写该项目章节时遵守。
+- 这样新立项项目一有活动,其约束**自动载入**,无需回来改这张清单。
 
 ### A.1: 自扫清单(全部默认执行)
 
@@ -119,10 +131,17 @@ for p in eastern-wisdom maxwell-homepage maxwell-rag-sources \
   }
 done
 
-# ---- 3. Yuan-MBP cfr 远程（默认有工作；cfr 路径见 memory feedback_claude_financial_research_git_log）----
-ssh ssh-yuan-mbp "git -C '/Users/yuan/Documents/Claude/Projects/A股200亿+投研-iFinD专属' \
+# ---- 3. 远程机 cfr 远程（默认有工作；cfr 路径见 memory feedback_claude_financial_research_git_log）----
+# 显式探活: 哨兵行 CFR_REACHABLE 打头, 消除「空输出」歧义(可达但 0 commit vs 不可达)。不用 grep(避 Bash 工具 truncation), 用 case + 参数展开剥哨兵; ConnectTimeout=8 防休眠时长挂。
+# cfr-host = 你的远程机 ssh 别名; <cfr-project-path> = cfr 项目在远程机上的绝对路径。
+cfr=$(ssh -o ConnectTimeout=8 cfr-host "echo CFR_REACHABLE; \
+  git -C '<cfr-project-path>' \
   log --since='$SINCE' --until='$UNTIL' \
-  --date=format:'%m-%d %H:%M' --pretty=format:'  %ad %h %s'" 2>/dev/null
+  --date=format:'%m-%d %H:%M' --pretty=format:'  %ad %h %s'" 2>/dev/null)
+case "$cfr" in
+  CFR_REACHABLE*) printf '=== cfr (远程机 可达) ===%s\n' "${cfr#CFR_REACHABLE}" ;;
+  *) echo "=== cfr ⚠️ 远程机 不可达(休眠/网络) → 日记引言块标 ⚠️ 远程待 D+1 补抓 ===" ;;
+esac
 
 # ---- 4. 今日改动 worklog memory + wiki / diaries ----
 find "$HOME/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory" \
@@ -138,8 +157,8 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 ### 扫描扩展
 
 - **跨日延续**: 凌晨提交 (00:00-06:59) 归前一天,扫描窗口要覆盖。
-- **本机扫不到的盲区**: Yuan-MBP cfr 默认有 + 其他全靠 Step B brain-dump。
-- **SSH 不可达**: Yuan-MBP 合盖休眠等情况,日记引言块标 ⚠️「Yuan-MBP 5/X SSH 不可达,远程工作待 X+1 补抓」(参考 5/26 日记)。不阻塞,Step E 不报错。
+- **本机扫不到的盲区**: 远程机 cfr 默认有 + 其他全靠 Step B brain-dump。
+- **SSH 不可达**: 远程机 合盖休眠等情况,日记引言块标 ⚠️「远程机 5/X SSH 不可达,远程工作待 X+1 补抓」(参考 5/26 日记)。不阻塞,Step E 不报错。
 
 ---
 
@@ -152,14 +171,14 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 向用户输出类似这样的一段(实际措辞按场合调整):
 
 ```
-开始记录今天。我并行后台扫了 git log + Yuan-MBP cfr + memory 改动,
+开始记录今天。我并行后台扫了 git log + 远程机 cfr + memory 改动,
 1-2 分钟出对账摘要。同时有几个本机扫不到的请你一次性 brain-dump 补充,
 没有的明说"无":
 
 1. 日期归属: 今天的工作是要记录到「今天」还是「昨天」?
    (凌晨段按规则归前一天,如有跨日工作或边界模糊请说明)
 
-2. Yuan-MBP 今天有没有工作?(默认有,我会 SSH 抓;只在「今天无工作」时主动告知)
+2. 远程机 今天有没有工作?(默认有,我会 SSH 抓;只在「今天无工作」时主动告知)
 
 3. 求职动态: 有新投递 / HR 沟通 / 面试 / offer 进展吗?
    (没有就明说"无新事件",我不追问细节)
@@ -183,13 +202,13 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 - **不主动问「重要沟通」**(Maxwell 有沟通会主动写,不在清单里列;避免冗余打扰)
 - **不主动问「跨 session 同步消息」**(那是即时处理的,不会拖到 ingest 时问)
 - **不主动问「生产部署 / Web 应用」**(并入对外动作 + 生活之外的「6. 模糊点 / 其他」兜底)
-- **Yuan-MBP 反转默认**: 默认有工作进 cfr 章节,只在用户说「今天没工作」才跳过 SSH 抓
+- **远程机 反转默认**: 默认有工作进 cfr 章节,只在用户说「今天没工作」才跳过 SSH 抓
 
 ### 解析用户输入
 
 - 用户可能 free-form 写一大段,你识别每一条对应哪个清单项
 - 用户明说「无」的就标记
-- 用户没提到的项: **不脑补**。Yuan-MBP 默认有(继续 SSH);其余项默认无、日记里不单独段(但事务段会标「均无」)
+- 用户没提到的项: **不脑补**。远程机 默认有(继续 SSH);其余项默认无、日记里不单独段(但事务段会标「均无」)
 - 用户提到的额外信息(清单 6 收的)按内容归类,可能要进对应项目章节 / 求职段 / 事务段 / 生活段
 
 ---
@@ -200,7 +219,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 **新增模式**(默认):
 ```
-收到。素材齐了(worklog X / maxwell-homepage Y / xiaohongshu-tool Z / Yuan-MBP N commits + 你补充 K 项)。
+收到。素材齐了(worklog X / maxwell-homepage Y / xiaohongshu-tool Z / 远程机 N commits + 你补充 K 项)。
 预计 20 至 30 分钟跑完,跑完终端打印完成清单 + 已 commit + 已 push。
 有错日记里标 ⚠️ + .ingest-status.md 写卡点。
 ```
@@ -281,7 +300,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 # 占位说明: 用 git status --short 列出 wiki/job/me/ 下实际改动的文件,逐个 add(不要字面 ...)
 git add <wiki/job/me/具体文件1> <wiki/job/me/具体文件2>
 git commit -m "docs(wiki/job): <用户微调摘要>" \
-  -m "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+  -m "Co-Authored-By: Claude <当前运行模型,如 Opus 4.8 (1M context)> <noreply@anthropic.com>"
 
 # 2. ingest 产出 commit (新增模式)
 # wiki/projects/ 下文件数由 D.2 实际改动的项目决定,逐个列出(避免 *.md add 全部)
@@ -289,7 +308,7 @@ git add "diaries/$D.md" wiki/index.md wiki/log.md wiki/todos.md
 git add wiki/projects/<D.2 实际改的 slug1>.md wiki/projects/<D.2 实际改的 slug2>.md  # 多个则逐个 add
 git commit -m "ingest: M/D 日记(<主线一句话>)" \
   -m "<正文: 各项目要点摘要,不用破折号>" \
-  -m "Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+  -m "Co-Authored-By: Claude <当前运行模型,如 Opus 4.8 (1M context)> <noreply@anthropic.com>"
 
 # 3. push 私有仓
 git push
@@ -308,7 +327,7 @@ git push
 **commit message 规范**:
 - 标题前缀: `ingest:` / `ingest-补:` / `ingest-改:`(三模式之一)
 - 正文: 各项目要点摘要,1-3 段,**不用破折号**
-- 结尾必含 Co-Authored-By 行(沿用 worklog 既有约定)
+- 结尾必含 Co-Authored-By 行,署名用**当前运行模型标识**(harness 注入,如 `Claude Opus 4.8 (1M context)`),**不写死版本号**(模型升级会 drift)
 
 ---
 
@@ -496,7 +515,7 @@ git_commits: 14          # 数字,跨项目 commit 总数
 ```markdown
 > 单次会话跨日产出: 5/27 白天起,一路工作到 5/28 凌晨 01:50。
 > 按日期边界规则,凌晨段全部归 5/27。
-> cfr(Yuan-MBP)5/27 无新投研。
+> cfr(远程机)5/27 无新投研。
 ```
 
 ### 概览
@@ -707,6 +726,7 @@ rg -n '\*\*[^*]+\*\*:|—' "$WORKLOG/diaries/$D.md"
 - **不做不可逆操作**: 不删 / 不移 / 不 rebase / 不 force-push;commit + push 是可逆的(revert / force-push 改),其他卡住等用户醒来
 - **跨项目同步消息不主动接**: 用户从其他 session 转过来的同步消息(像 maxwell-homepage 的 P0 修复反馈)是即时处理,不在 Step B 收集清单内
 - **求职细节不追问**: Maxwell 给求职数据 / 口径是让我落档,不是做谈薪 / 面试教练;不追问面试言行,不推行动清单,风险提醒一句点到为止(见 memory `feedback_job_scope_record_not_coach`)
+- **客户 / 私有项目敏感数据不进 worklog**: 扫到的客户 / 私有项目 git log 摘要写进 diary / `wiki/projects/` 时,**报价 / 真实姓名 / 涉敏数据等敏感细节留在项目本地 PRD,不进 worklog**(`wiki/projects/` 可能被下游站点 build 读 = 半公开)。项目专属约束由 A.0 ② 动态载入,按其红线办
 
 ---
 
@@ -715,7 +735,7 @@ rg -n '\*\*[^*]+\*\*:|—' "$WORKLOG/diaries/$D.md"
 - **契约层**: `worklog/AIREADME/ARCHITECTURE.md` 6 步契约定义(本 skill 是实现)
 - **日记 schema**: `worklog/AIREADME/CONVENTIONS.md` 日记格式契约
 - **触发语接口**: `worklog/AIREADME/SPEC.md`
-- **关联 memory**(完整 superset。**Step A.0 的 8 个 memory 是 essential subset 必读**;此处其余几个为「触发联想」遇坑再查):
+- **关联 memory**(完整 superset。**Step A.0 ① 的 8 个 memory 是 essential subset 必读**,**② 活跃项目的 `project_*.md` 走 MEMORY.md 索引动态读**;此处其余几个为「触发联想」遇坑再查):
 
   Step A.0 必读 8 个(essential subset):
   - 日期对齐 → `feedback_stash_date_alignment`
