@@ -143,6 +143,18 @@ case "$cfr" in
   *) echo "=== cfr ⚠️ 远程机 不可达(休眠/网络) → 日记引言块标 ⚠️ 远程待 D+1 补抓 ===" ;;
 esac
 
+# ---- 3.5 远程雇主/客户项目（里程碑级追踪；细节留本地不进 worklog）----
+# 工作机上的 digest 脚本聚合 4 信号(我署名 commit + 未提交改动 + 顶层文档 + Claude 记忆);
+# 项目含多个 git 子仓、单一 git log 覆盖不了,故用脚本。哨兵 WORK_REACHABLE 剥「可达 0 改动 vs 不可达」歧义。
+# work-host = 工作机 ssh 别名; <work-digest-script> = 工作机上聚合当日改动的脚本绝对路径。
+# ⚠️ digest 仅作"理解当天干了啥"的输入: 日记/wiki 只记 milestone 级,仓库名/模块/接口/团队/内部产品细节绝不进 worklog。
+work=$(ssh -o ConnectTimeout=8 work-host "echo WORK_REACHABLE; \
+  <work-digest-script> '$D'" 2>/dev/null)
+case "$work" in
+  WORK_REACHABLE*) printf '=== 雇主项目 (工作机 可达) ===%s\n' "${work#WORK_REACHABLE}" ;;
+  *) echo "=== 雇主项目 ⚠️ 工作机 不可达(合盖/休眠/网络) → 日记引言块标 ⚠️ 待 D+1 补抓 ===" ;;
+esac
+
 # ---- 4. 今日改动 worklog memory + wiki / diaries ----
 find "$HOME/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory" \
      -name '*.md' -newermt "$D 00:00" 2>/dev/null
@@ -157,8 +169,9 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 ### 扫描扩展
 
 - **跨日延续**: 凌晨提交 (00:00-06:59) 归前一天,扫描窗口要覆盖。
-- **本机扫不到的盲区**: 远程机 cfr 默认有 + 其他全靠 Step B brain-dump。
-- **SSH 不可达**: 远程机 合盖休眠等情况,日记引言块标 ⚠️「远程机 5/X SSH 不可达,远程工作待 X+1 补抓」(参考 5/26 日记)。不阻塞,Step E 不报错。
+- **本机扫不到的盲区**: 远程机 cfr(默认有)+ 工作机 雇主项目(digest 脚本自动扫,里程碑级)+ 其他全靠 Step B brain-dump。
+- **雇主项目 digest = milestone 输入**: §3.5 跑 digest 脚本返回的 4 段(我署名 commit / 未提交改动 / 文档 / Claude 记忆)只作"理解当天干了啥",日记只记 milestone;仓库 / 模块 / 接口 / 团队 / 内部产品细节不进 worklog。
+- **SSH 不可达**: 远程机 / 工作机 合盖休眠等情况,日记引言块标 ⚠️「<机器> SSH 不可达,远程工作待 X+1 补抓」(参考 5/26 日记)。不阻塞,Step E 不报错。
 
 ---
 
@@ -171,7 +184,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 向用户输出类似这样的一段(实际措辞按场合调整):
 
 ```
-开始记录今天。我并行后台扫了 git log + 远程机 cfr + memory 改动,
+开始记录今天。我并行后台扫了 git log + 远程机 cfr + 工作机 雇主项目 digest + memory 改动,
 1-2 分钟出对账摘要。同时有几个本机扫不到的请你一次性 brain-dump 补充,
 没有的明说"无":
 
