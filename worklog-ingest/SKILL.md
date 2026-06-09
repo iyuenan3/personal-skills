@@ -102,8 +102,8 @@ fi
 D_END=$(date -v+1d -j -f '%Y-%m-%d' "$D" +%Y-%m-%d 2>/dev/null \
         || date -d "$D + 1 day" +%Y-%m-%d)
 SINCE="$D 07:00"
-UNTIL="$D_END 07:00"
-echo "目标归属日 D=$D, 扫描窗口 [$SINCE, $UNTIL)"
+UNTIL="$D_END 06:59:59"   # git --until 闭区间(<=), 用 06:59:59 收口使窗口=半开 [D 07:00, 次日 07:00), 防正好 07:00:00 的 commit 跨两天双算
+echo "目标归属日 D=$D, 扫描窗口 [$SINCE, $UNTIL]"
 
 # ---- 0.2 模式实测(触发语 + 文件实测共定模式;防覆盖历史日记)----
 if [ -f "$WORKLOG/diaries/$D.md" ]; then
@@ -125,7 +125,7 @@ for p in eastern-wisdom maxwell-homepage maxwell-rag-sources \
          short-story xiaohongshu-tool worklog; do
   d="$HOME/Desktop/Claude-Project/$p"
   [ -d "$d/.git" ] && {
-    log=$(git -C "$d" log --since="$SINCE" --until="$UNTIL" \
+    log=$(git -C "$d" log --all --since="$SINCE" --until="$UNTIL" \
           --date=format:'%m-%d %H:%M' --pretty=format:'  %ad %h %s' 2>/dev/null)
     [ -n "$log" ] && printf '=== %s ===\n%s\n\n' "$p" "$log"
   }
@@ -136,7 +136,7 @@ done
 # cfr-host = 你的远程机 ssh 别名; <cfr-project-path> = cfr 项目在远程机上的绝对路径。
 cfr=$(ssh -o ConnectTimeout=8 cfr-host "echo CFR_REACHABLE; \
   git -C '<cfr-project-path>' \
-  log --since='$SINCE' --until='$UNTIL' \
+  log --all --since='$SINCE' --until='$UNTIL' \
   --date=format:'%m-%d %H:%M' --pretty=format:'  %ad %h %s'" 2>/dev/null)
 case "$cfr" in
   CFR_REACHABLE*) printf '=== cfr (远程机 可达) ===%s\n' "${cfr#CFR_REACHABLE}" ;;
