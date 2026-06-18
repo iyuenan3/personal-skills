@@ -40,7 +40,7 @@ description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生
    - **CLAUDE.md**：若已是 router（薄、只有状态/路由/红线/命令/元信息）→ 不动、仅补「维护责任」段指向 AIREADME；若臃肿 → 给瘦成 router（80–150 行）的 **diff 预览**。
    - **立项 / 无 commit 项目**：`git rm` 必须在**首 commit 立项 baseline 之后**（无 commit 就删 = 真丢失、无 git 兜底）；**首 commit 也一并提请确认、不自动执行**（遵全局「commit 仅在用户要求时」）。
    确认后才 `git rm` + 落 CLAUDE 瘦身。
-8. **写 INDEX 同步锚点**：`last-synced: <commit SHA> · <date>`（update 靠它算 delta）。
+8. **写 INDEX 同步锚点**（机器可读契约，见 STANDARD「同步锚点格式」）：`last-synced: <commit SHA> · <date>` 独占一行，**SHA 必填**（立项无 commit 用 `pre-code` 哨兵），别塞 changelog / 备注，注释另起一行。update / drift 靠它算 delta。
 9. **跑 `check.sh`**（🔴 exit 1 必修、🟡 exit 0 advisory）→ 报告：建了/实填/占位哪些、各旧 doc 迁入/指向/删根/保留、vendored 怎么处理、共享底座写进了谁、flagged 项。
 
 ## update 流程
@@ -49,13 +49,15 @@ description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生
 2. `git log <SHA>..HEAD` + 看改动的 docs/code → 定哪些文件要更新（**新增 `upstream/`/`vendor/` 目录或上游身份变敏感 → 套 init Step 4 的「不吸收 vendored doc + scrub 禁词」守卫**）。
 3. 按**更新触发**改对应文件（部署变→DEPLOYMENT / 重大决策→DECISIONS / 出事→MEMORY / release→CHANGELOG / 接口变→SPEC …）。
 4. **append-only 文件**（CHANGELOG / DECISIONS / MEMORY）**只追加，不重写历史**。
-5. 刷新 `INDEX.md` 状态表 + 更新 `last-synced` SHA。
+5. 刷新 `INDEX.md` 状态表 + 把 `last-synced` 更到本次 HEAD 的 SHA（格式 `<SHA> · <date>`，见 STANDARD「同步锚点格式」；别塞 changelog 进锚点）。
 6. 跑 `check.sh`（🔴 必修）+ 报告 diff。
 
 ## check 流程
 
-跑 `check.sh`（12 文件齐 + INDEX 状态表 + 同步锚点 + 未填占位清单 + key 泄漏 + 边界**仅机检 2 项**：ARCH 混对外 API / DECISIONS 混事故）+ **人工边界复核**（check.sh green ≠ 边界干净）：SPEC 没混实现细节 / ARCHITECTURE 没复述决策理由 / DECISIONS 没混事故 / ROADMAP 没塞 TODO 颗粒。
-> 退出码：🔴 = exit 1（必修）；🟡 = advisory（exit 0）。
+跑 `check.sh`（12 文件齐 + INDEX 状态表 + 同步锚点**格式校验** + 未填占位清单 + key 泄漏 + 边界**仅机检 2 项**：ARCH 混对外 API / DECISIONS 混事故）+ **人工边界复核**（check.sh green ≠ 边界干净）：SPEC 没混实现细节 / ARCHITECTURE 没复述决策理由 / DECISIONS 没混事故 / ROADMAP 没塞 TODO 颗粒。
+
+**漂移检查**（项目演进后判断 AIREADME 是否过期）：在项目 git 仓内跑 `check.sh --drift`，读锚点 SHA 算 `git rev-list <SHA>..HEAD`，报落后多少 commit + delta 是否触及结构 / 部署文件（DEPLOYMENT / ARCHITECTURE / SPEC 可能要更）。worklog-ingest 每日扫描会对当天活跃项目自动跑这一步、把漂移项列进完成报告（漂移雷达），据此决定要不要 `/aireadme update`。
+> 退出码：🔴 = exit 1（必修）；🟡 = advisory / drift 信息（exit 0）。
 
 ## 红线（任一触发即停 + 校正）
 

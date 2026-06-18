@@ -152,6 +152,33 @@ for s in $cl; do
   printf '%s\n' $SCAN_PROJECTS | grep -qxF "$s" || echo "⚠️ drift: CLAUDE.md 扫描段有本地项目 $s 但 SCAN_PROJECTS 数组无 → 补进数组"
 done
 
+# ---- 2.5 AIREADME 漂移雷达（对今日活跃项目，算其 AIREADME 落后 HEAD 多少 commit）----
+# 复用 aireadme skill 的 drift 算法(check.sh --drift, 单一真相源, 不在此重写); 只对「今日窗口内有 commit + 有真 AIREADME(以 INDEX.md 为准)」的项目跑。
+# 漂移 = 你今天动过、AIREADME 没跟上 → Step E 列出, 你决定要不要 /aireadme update。本 skill 只暴露漂移、绝不自动改 AIREADME(update 有确认门)。
+# scope 边界: 只抓「今日活跃」的漂移; 今天没动但陈年滞后的项目不在此列(定期手动 /aireadme check 全量)。雷达全清 ≠ 全库同步。
+# 远程项目(SSH 机器上的)无本地 AIREADME, 不在雷达范围。
+DRIFT_TOOL="$HOME/.claude/skills/aireadme/check.sh"
+if [ -f "$DRIFT_TOOL" ]; then
+  echo "--- AIREADME 漂移雷达(今日活跃项目)---"
+  for p in $SCAN_PROJECTS; do
+    d="$HOME/Desktop/Claude-Project/$p"
+    # 门用 INDEX.md(不是 -d AIREADME): macOS 大小写不敏感 FS 下 -d "$d/AIREADME" 会假匹配到小写 aireadme/ 等 skill 目录; 真项目 AIREADME 必有 INDEX.md
+    [ -d "$d/.git" ] && [ -f "$d/AIREADME/INDEX.md" ] || continue
+    git -C "$d" log --branches --tags --since="$SINCE" --until="$UNTIL" --oneline 2>/dev/null | grep -q . || continue
+    out=$( cd "$d" && bash "$DRIFT_TOOL" --drift AIREADME 2>/dev/null )
+    # case 必须有 catch-all: check.sh 的 🔴 无 INDEX / 🟡 不是 HEAD 祖先 / 🟡 不在本仓历史 都是真漂移信号, 漏掉等于废掉上游防漏报。
+    # 静默只给 ✅ 已同步 + pre-code(用 emoji/关键词前缀判, 别用 *同步* 因「不是祖先」消息里含「已同步」字样)。
+    case "$out" in
+      ✅*|*pre-code*) : ;;
+      *落后*) printf '  ⚠️ %s: %s\n' "$p" "$(printf '%s' "$out" | head -1)" ;;
+      *无可解析*) printf '  ⚠️ %s: AIREADME 锚点退化(无 SHA), 先 /aireadme 修锚点\n' "$p" ;;
+      *) printf '  ⚠️ %s: AIREADME 漂移信号需核对: %s\n' "$p" "$(printf '%s' "$out" | head -1)" ;;
+    esac
+  done
+else
+  echo "(aireadme check.sh 不在, 跳过漂移雷达)"
+fi
+
 # ---- 2.1 漏记前几天缺口检测（非阻塞；最近 7 天逐日查日记是否存在 + 当天 commit；尾部缺口 + 中间空洞都抓）----
 gstart=$(date -v-7d -j -f '%Y-%m-%d' "$D" +%Y-%m-%d 2>/dev/null || date -d "$D -7 day" +%Y-%m-%d)
 g="$gstart"
@@ -210,6 +237,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 - **本机扫不到的盲区**: 远程机 cfr(默认有)+ 工作机 雇主项目(digest 脚本自动扫,里程碑级)+ 其他全靠 Step B brain-dump。
 - **雇主项目 digest = milestone 输入**: §3.5 跑 digest 脚本返回的 4 段(我署名 commit / 未提交改动 / 文档 / Claude 记忆)只作"理解当天干了啥",日记只记 milestone;仓库 / 模块 / 接口 / 团队 / 内部产品细节不进 worklog。
 - **SSH 不可达**: 远程机 / 工作机 合盖休眠等情况,日记引言块标 ⚠️「<机器> SSH 不可达,远程工作待 X+1 补抓」(参考 5/26 日记)。不阻塞,Step E 不报错。
+- **AIREADME 漂移雷达(§2.5)**: 对今日活跃 + 本地有 `AIREADME/` 的项目,复用 `aireadme/check.sh --drift` 算 AIREADME 落后 HEAD 多少 commit,漂移项转述进 Step E 报告。**只暴露不自动改**(`/aireadme update` 有确认门)。解决 AIREADME「init 做到位、update 没人记得跑」导致的无声漂移。远程项目(SSH 机器上的)无本地 AIREADME,不在范围。
 
 ---
 
@@ -406,9 +434,12 @@ Wiki 更新: index / log / todos / projects/{slugs}
 TODO 盘点: ✅ 完成 N / 失效 M / 顺延 K
 Commit: <hash1> 内容微调 / <hash2> ingest 产出
 Push: ✅ pushed to origin/main
+AIREADME 漂移: ⚠️ <projA> 落后 17 / <projB> 落后 28（今日动过但 AIREADME 未跟上 → 考虑 /aireadme update）｜ 无则「均同步」
 
 主线: ...(一句话回顾)
 ```
+
+> **AIREADME 漂移行 = §2.5 雷达输出直接转述**（哪些今日活跃项目的 AIREADME 落后 + commit 数 / 锚点退化 / 失锚）。**只提示、不自动跑 update**（update 有确认门、要判断，属另一动作）；雷达全清则写「均同步（仅今日活跃项目）」。**scope 边界**：雷达只覆盖今日动过的项目，陈年滞后（今天没动但早已漂移）的项目不在此列，需定期手动 `/aireadme check` 全量，雷达全清 ≠ 全库同步。
 
 ### 错误路径
 

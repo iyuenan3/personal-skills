@@ -1,6 +1,7 @@
 # <项目> · AIREADME
 > 一句话定位 ｜ 生命周期: planned | active | archived
-> last-synced: ⚑ <commit SHA> · <date>   <!-- 填入真实 SHA 后删掉 ⚑ -->
+> last-synced: ⚑ <commit SHA> · <date>
+<!-- 同步锚点：单行 `<7-40 位 SHA 或 pre-code> · YYYY-MM-DD`；update / drift 靠它算 delta。填真实 SHA 后删 ⚑；立项无 commit 用 pre-code 哨兵。别塞 changelog / 备注（进 CHANGELOG）；注释另起一行，不和锚点值同行。 -->
 
 <!-- 路由器：只指路，不放实质内容。INDEX 不列自己。任何文件增减/状态变都更新这里。符号：✅已填 / ⚑占位 / —N/A -->
 

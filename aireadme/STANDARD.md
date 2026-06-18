@@ -1,4 +1,4 @@
-# AIREADME 标准 v0.1
+# AIREADME 标准 v0.2
 
 > 每个项目根 `AIREADME/` = 该项目的 **AI 真相源**。本文件是逐文件编写规范，`aireadme` skill 执行时读它。
 > 双用途：**跨项目了解**（别人读你）+ **防偏差**（你读自己）。
@@ -117,7 +117,8 @@
 ```markdown
 # <项目> · AIREADME
 > 一句话定位 ｜ 生命周期: active
-> last-synced: <commit SHA> · <date>   <!-- update 靠它算 delta；INDEX 不列自己 -->
+> last-synced: <commit SHA> · <date>
+<!-- 同步锚点格式见下；注释另起一行，不和锚点值同行。INDEX 不列自己。 -->
 
 ## 状态
 | 文件 | 状态 | 摘要 |
@@ -133,6 +134,15 @@
 - 加功能 → PRD + ROADMAP + CONVENTIONS
 ```
 状态符号：`✅ 已填 / ⚑ 占位(将填) / — N/A`
+
+### 同步锚点格式（机器可读契约）
+
+`last-synced` 是 update / drift 算 delta 的命根子，**必须机器可解析**，否则文档会无声烂掉：
+
+- 单行 `last-synced: <SHA> · <date>`：`<SHA>` = 7-40 位 commit hex（立项未出 commit 用 `pre-code` 哨兵）；`<date>` = `YYYY-MM-DD`；中间分隔用 `·`。
+- **SHA 必填**：没有 SHA，`git log <SHA>..HEAD` 这套增量机制直接失效（锚点一旦退化成「日期 + 一段 changelog」就无法算 delta）。
+- **别塞 changelog / 备注 / 「待提交」字样**（那些进 CHANGELOG）；注释 `<!-- -->` 另起一行（同行注释虽会被剥除，但若注释里重复出现 `last-synced:` 字面词，会被 greedy 取值吞掉、解析出错的 SHA，故另起一行最稳）。
+- `check.sh` 校验此格式（不合规 🟡）；`check.sh --drift`（在项目 git 仓内跑）据此算 AIREADME 落后 HEAD 多少 commit + delta 是否触及结构 / 部署文件。
 
 ## 占位规范
 
@@ -166,4 +176,4 @@
 > 理由：节点抽象有维护成本，小底座不值得单独成套文档。例：一个被 ≥2 项目共享的 Caddy 配置，即便放在 `proj-a/edge/` 子目录，也只写进 `proj-a` 根 AIREADME。
 
 ---
-v0.1 — 版本史见 CHANGELOG.md。
+v0.2，版本史见 CHANGELOG.md。
