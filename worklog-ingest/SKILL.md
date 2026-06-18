@@ -116,29 +116,68 @@ fi
 # 若用户触发语与实测冲突(如「补充今天」但文件不存在),按上方 fallback 规则修正 MODE
 
 # ---- 1. 真实日期对齐（防 compact summary 跨天压成一天）----
-git -C "$WORKLOG" log --date=short --pretty=format:'%h %ad %s' -20
+git -C "$WORKLOG" log --date=short --pretty=format:'%h %cd %s' -20
 
-# ---- 2. 各项目今日 commit（按归属日期窗口）----
-# 扫描项目列表 source of truth = worklog/CLAUDE.md「需要扫描的项目」段;改一处必同步本处
-for p in eastern-wisdom maxwell-homepage maxwell-rag-sources \
-         multiplayer-xiaoshuo newapi-proxy jobs-hunt petslog \
-         short-story xiaohongshu-tool worklog; do
+# ---- 2. 各项目今日 commit / 改动（按归属日期窗口）----
+# SCAN_PROJECTS = canonical 列表, 须与 worklog/CLAUDE.md「需要扫描的项目」段一致;循环末尾 drift lint 自动比对。
+# 关键: ① --branches --tags 不含 refs/stash(避免 WIP on main / index on main 伪 commit 当真实工作)
+#       ② 显示 %cd(commit-date, 与 --since/--until 过滤口径一致; rebase/squash 旧 author-date 不错位)
+#       ③ 无 .git 项目走 mtime 兜底, 否则零 commit 新项目对扫描完全隐形
+SCAN_PROJECTS="eastern-wisdom maxwell-homepage maxwell-rag-sources \
+  multiplayer-xiaoshuo newapi-proxy jobs-hunt petslog \
+  short-story xiaohongshu-tool worklog"
+for p in $SCAN_PROJECTS; do
   d="$HOME/Desktop/Claude-Project/$p"
-  [ -d "$d/.git" ] && {
-    log=$(git -C "$d" log --all --since="$SINCE" --until="$UNTIL" \
-          --date=format:'%m-%d %H:%M' --pretty=format:'  %ad %h %s' 2>/dev/null)
+  [ -d "$d" ] || continue
+  if [ -d "$d/.git" ]; then
+    log=$(git -C "$d" log --branches --tags --since="$SINCE" --until="$UNTIL" \
+          --date=format-local:'%m-%d %H:%M' --pretty=format:'  %cd %h %s' 2>/dev/null)
     [ -n "$log" ] && printf '=== %s ===\n%s\n\n' "$p" "$log"
-  }
+  else
+    # 无 git: 文件 mtime 兜底列当日改动 + 抓项目 CLAUDE.md 进度段(BSD find 兼容, 无 -printf)
+    files=$(find "$d" -type f -newermt "$SINCE" ! -newermt "$UNTIL" \
+            ! -path '*/.git/*' ! -path '*/.venv/*' ! -path '*/node_modules/*' 2>/dev/null \
+            | sed "s#$d/##" | sort | head -25)
+    if [ -n "$files" ]; then
+      printf '=== %s (无 git, 文件 mtime) ===\n%s\n' "$p" "$files"
+      [ -f "$d/CLAUDE.md" ] && { echo '--- CLAUDE.md 进度段(节选) ---'; grep -n -iE '进度|status' "$d/CLAUDE.md" | head -3; }
+      echo ""
+    fi
+  fi
+done
+# drift lint: CLAUDE.md 扫描段的本地 slug 若不在 SCAN_PROJECTS 则告警(防双写漂移)
+cl=$(sed -n '/需要扫描的项目/,/^>/p' "$WORKLOG/CLAUDE.md" | grep -oE '`[a-z0-9-]+`' | tr -d '`' | sort -u)
+for s in $cl; do
+  [ -d "$HOME/Desktop/Claude-Project/$s/.git" ] || [ -f "$HOME/Desktop/Claude-Project/$s/CLAUDE.md" ] || continue
+  printf '%s\n' $SCAN_PROJECTS | grep -qxF "$s" || echo "⚠️ drift: CLAUDE.md 扫描段有本地项目 $s 但 SCAN_PROJECTS 数组无 → 补进数组"
+done
+
+# ---- 2.1 漏记前几天缺口检测（非阻塞；最近 7 天逐日查日记是否存在 + 当天 commit；尾部缺口 + 中间空洞都抓）----
+gstart=$(date -v-7d -j -f '%Y-%m-%d' "$D" +%Y-%m-%d 2>/dev/null || date -d "$D -7 day" +%Y-%m-%d)
+g="$gstart"
+while [[ "$g" < "$D" ]]; do
+  gend=$(date -v+1d -j -f '%Y-%m-%d' "$g" +%Y-%m-%d 2>/dev/null || date -d "$g +1 day" +%Y-%m-%d)
+  if [ ! -f "$WORKLOG/diaries/$g.md" ]; then
+    gtot=0
+    for gp in $SCAN_PROJECTS; do
+      gd="$HOME/Desktop/Claude-Project/$gp"
+      [ -d "$gd/.git" ] && gtot=$((gtot + $(git -C "$gd" log --branches --tags \
+        --since="$g 07:00" --until="$gend 06:59:59" --oneline 2>/dev/null | wc -l | tr -d ' ')))
+    done
+    [ "$gtot" -gt 0 ] && echo "⚠️ 缺口: $g 无日记但各项目当天共 $gtot 个 commit → Step B 主动问是否一并补记(提示不自动补)"
+  fi
+  g="$gend"
 done
 
 # ---- 3. 远程机 cfr 远程（默认有工作；cfr 路径见 memory feedback_claude_financial_research_git_log）----
 # 显式探活: 哨兵行 CFR_REACHABLE 打头, 消除「空输出」歧义(可达但 0 commit vs 不可达)。不用 grep(避 Bash 工具 truncation), 用 case + 参数展开剥哨兵; ConnectTimeout=8 防休眠时长挂。
 # cfr-host = 你的远程机 ssh 别名; <cfr-project-path> = cfr 项目在远程机上的绝对路径。
-cfr=$(ssh -o ConnectTimeout=8 cfr-host "echo CFR_REACHABLE; \
-  git -C '<cfr-project-path>' \
-  log --all --since='$SINCE' --until='$UNTIL' \
-  --date=format:'%m-%d %H:%M' --pretty=format:'  %ad %h %s'" 2>/dev/null)
+cfr=$(ssh -o ConnectTimeout=8 cfr-host "P='<cfr-project-path>'; \
+  echo CFR_REACHABLE; [ -d \"\$P/.git\" ] || echo CFR_PATH_MISSING; \
+  git -C \"\$P\" log --branches --tags --since='$SINCE' --until='$UNTIL' \
+  --date=format-local:'%m-%d %H:%M' --pretty=format:'  %cd %h %s'" 2>/dev/null)
 case "$cfr" in
+  *CFR_PATH_MISSING*) echo "=== cfr ⚠️ 远程机 可达但 cfr 路径失效(疑似改名/迁移) → 引言块标、勿当可达 0 commit ===" ;;
   CFR_REACHABLE*) printf '=== cfr (远程机 可达) ===%s\n' "${cfr#CFR_REACHABLE}" ;;
   *) echo "=== cfr ⚠️ 远程机 不可达(休眠/网络) → 日记引言块标 ⚠️ 远程待 D+1 补抓 ===" ;;
 esac
@@ -155,12 +194,11 @@ case "$work" in
   *) echo "=== 雇主项目 ⚠️ 工作机 不可达(合盖/休眠/网络) → 日记引言块标 ⚠️ 待 D+1 补抓 ===" ;;
 esac
 
-# ---- 4. 今日改动 worklog memory + wiki / diaries ----
+# ---- 4. 今日改动 worklog memory + wiki / diaries（按归属窗口 [SINCE, UNTIL]，与 §2 口径一致）----
 find "$HOME/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory" \
-     -name '*.md' -newermt "$D 00:00" 2>/dev/null
-find "$HOME/Desktop/Claude-Project/worklog/wiki" \
-     "$HOME/Desktop/Claude-Project/worklog/diaries" \
-     -name '*.md' -newermt "$D 00:00" 2>/dev/null
+     -name '*.md' -newermt "$SINCE" ! -newermt "$UNTIL" 2>/dev/null
+find "$WORKLOG/wiki" "$WORKLOG/diaries" \
+     -name '*.md' -newermt "$SINCE" ! -newermt "$UNTIL" 2>/dev/null
 
 # ---- 5. todos.md 现状 ----
 cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
@@ -261,6 +299,8 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 **执行顺序**: **D.3 TODO 盘点 → D.1 写日记 → D.2 更 wiki → D.4 commit + push**。
 
+> **硬约束(贯穿 Step D)**: 所有 git / 文件操作走 `WORKLOG="$HOME/Desktop/Claude-Project/worklog"` 绝对锚点(`git -C "$WORKLOG"` / `"$WORKLOG/..."`), **不依赖 cwd、不用裸 `cd`**。长会话 Bash 工具 cwd 会漂移、shell 变量也不跨 Bash 调用持久, 每个新 Bash 调用若用到 `$WORKLOG` / `$D` 先重设。
+
 - **D.3 先做**: 盘点结果(完成 N / 失效 M / 顺延 K + 关键变化一句)进 D.1 的「事务·TODO 盘点」段。
 - **todos.md 主存储由 D.3 全权拥有**: D.2 不重复操作 todos.md(避免与 D.3 双重操作不一致)。
 - **D.1 概览灵魂句一旦写定**(`> **主线 = ...**`)、Step E 终端打印的「主线」回顾**直接 quote 这一句**,不要二次造句产生 drift。
@@ -307,24 +347,32 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 **分两步 commit**(语义分离):
 
 ```bash
-# 1. 仅当 ingest 执行过程中由 brain-dump 衍生出对 wiki/job/me 文件的修改（如「补充招呼语第 3 段」）,才分两步 commit
-# 用户在 ingest 触发前已自己 commit 的内容修改不重复处理（不在 skill 职责内）
-# 工作树检查: git -C "$WORKLOG" status --short 看 wiki/job/me 有无 staged/unstaged 但与 ingest 无关的改动
-# 占位说明: 用 git status --short 列出 wiki/job/me/ 下实际改动的文件,逐个 add(不要字面 ...)
-git add <wiki/job/me/具体文件1> <wiki/job/me/具体文件2>
-git commit -m "docs(wiki/job): <用户微调摘要>" \
+# 全程 git -C "$WORKLOG"(不依赖 cwd; 长会话 Bash cwd 会漂移、裸 git add 会落到错目录或静默失败)
+WORKLOG="$HOME/Desktop/Claude-Project/worklog"
+PUNCT=~/.claude/skills/worklog-ingest/scripts/punctuation_check.py
+
+# 1. 求职 / me 材料 commit: 仅当 ingest 过程中改过 wiki/job 或 wiki/me
+#    (如 D.3 把 #todo/job-hunt 写进 面试备战.md、或 brain-dump 衍生的招呼语微调;
+#     ⚠️ D.3 改的备战 / activity 文件必须在这步 add, 否则漏 commit 留工作树被下次裹进无关 commit)。
+#    用户在 ingest 触发前已自己 commit 的不重复处理。用 status 列实际改动逐个 add(不要字面 <...>)。
+git -C "$WORKLOG" status --short wiki/job wiki/me      # 看有无 ingest 相关改动, 有才走本步
+git -C "$WORKLOG" add wiki/job/<D.3/brain-dump 实改文件...> wiki/me/<...>
+git -C "$WORKLOG" commit -m "docs(job): <摘要>" \
   -m "Co-Authored-By: Claude <当前运行模型,如 Opus 4.8 (1M context)> <noreply@anthropic.com>"
 
-# 2. ingest 产出 commit (新增模式)
-# wiki/projects/ 下文件数由 D.2 实际改动的项目决定,逐个列出(避免 *.md add 全部)
-git add "diaries/$D.md" wiki/index.md wiki/log.md wiki/todos.md
-git add wiki/projects/<D.2 实际改的 slug1>.md wiki/projects/<D.2 实际改的 slug2>.md  # 多个则逐个 add
-git commit -m "ingest: M/D 日记(<主线一句话>)" \
-  -m "<正文: 各项目要点摘要,不用破折号>" \
+# 2. ingest 产出 commit (新增模式)。wiki/projects 下逐个列 D.2 实改的 slug(避免 *.md add 全部)。
+git -C "$WORKLOG" add "diaries/$D.md" wiki/index.md wiki/log.md wiki/todos.md
+git -C "$WORKLOG" add wiki/projects/<D.2 实改 slug1>.md wiki/projects/<D.2 实改 slug2>.md
+# ⚠️ commit 不可改(不 rebase 是红线) → 标题先过 --commit 门(只 gate 破折号; type:冒号 / 日记()括号是 commit 惯例不拦)
+T="ingest: M/D 日记(<主线一句话>)"
+printf '%s\n' "$T" > /tmp/wl_msg.txt
+python3 "$PUNCT" --commit /tmp/wl_msg.txt || echo "⚠️ 标题含破折号(em-dash), 改后再 commit"
+git -C "$WORKLOG" commit -m "$T" \
+  -m "<正文: 各项目要点摘要, 不用破折号>" \
   -m "Co-Authored-By: Claude <当前运行模型,如 Opus 4.8 (1M context)> <noreply@anthropic.com>"
 
 # 3. push 私有仓
-git push
+git -C "$WORKLOG" push
 ```
 
 **三模式 commit 分支**:
@@ -388,7 +436,7 @@ git push 失败: 网络不可达(2026-05-27 04:12)
 - (没了)
 
 ## 复现 / 接着跑
-cd ~/Desktop/Claude-Project/worklog && git push
+git -C "$HOME/Desktop/Claude-Project/worklog" push
 ```
 
 ---
@@ -467,17 +515,8 @@ commit message 是「做了什么」的简写。日记要补「为什么这么�
 
 ## 默认偏好(Maxwell 风格)
 
-- **标点**: 中文全角(`:` `(` `)` `;`),不用半角
-- **破折号 `—` / `——`**: **绝对禁止**(标题分隔用 `:`,插入语用 `(...)`,转折用 `,`)
-- **时间**: 24h `HH:MM`,不用「下午 2 点」
-- **跨日边界**: 00:00-06:59 归前一天
-- **commit hash**: 反引号包裹
-- **项目 / 文件名**: wikilink `[[slug]]` 或反引号 `path`
-- **量化**: 具体数字,**没有就不写**
-- **列表**: `-`,不用 `*`
-- **emoji**: 🔥(主线程度) / ⭐(章节重要) / ✅⏳⚠️(状态) 节制使用,不堆砌
-- **H1 日记标题**: `# 工作日记：YYYY年MM月DD日（周X）`
-- **H2 章节标题**: `## <主体> · <主题>`(中点 `·` 分隔)
+> 写作 / 标点 / 时间 / commit hash / wikilink / emoji / 标题格式的 **canonical 规则见下方「写作规范」表**, 本处不再重复(防两份拷贝漂移)。
+> 另两条不在表内的: **跨日边界** 00:00-06:59 归前一天(见核心 judgment §4); **标点门**由 `scripts/punctuation_check.py` 强制(见「写盘前必做的校验」)。
 
 ---
 
@@ -564,9 +603,9 @@ git_commits: 14          # 数字,跨项目 commit 总数
 ```markdown
 ## <slug> · <本日主题摘要>
 
-> 项目目录: `~/Desktop/Claude-Project/<slug>/`
-> 工作时段: HH:MM → HH:MM(跨日延续说明)
-> (可选)session 说明(如「另一 session」)
+> 项目目录：`~/Desktop/Claude-Project/<slug>/`
+> 工作时段：HH:MM → HH:MM（跨日延续说明）
+> （可选）session 说明（如「另一 session」）
 
 ### 今日进展
 
@@ -590,10 +629,10 @@ git_commits: 14          # 数字,跨项目 commit 总数
 
 ### 事务段(实证格式,基于 5/14-5/27 历史日记归纳)
 
-**有就写,无就不列**;全无 → 一行「均无」。**类目仅作 trigger 提示,不强行展开 4 行「无」**。**当事务段全部由用户在 brain-dump 中明确确认时,标题加 （已确认）**(参 5/27 日记格式);若部分项有不确定 → 用 `## 事务`(不带后缀)。
+**有就写,无就不列**;全无 → 一行「均无」。**类目仅作 trigger 提示,不强行展开 4 行「无」**。标题统一用裸 `## 事务`(「（已确认）」后缀约定已废弃);若想标确认度, 段首加一行 `> 本段均经 brain-dump 确认`。
 
 ```markdown
-## 事务（已确认）
+## 事务
 
 (用户 brain-dump 提到 + Step A 扫到的非项目动作,逐条 bullet 写;全无 → 均无)
 
@@ -636,63 +675,41 @@ git_commits: 14          # 数字,跨项目 commit 总数
 | H2 章节标题 | `## <主体> · <主题>`(中点 `·` 分隔) |
 | H1 日记标题 | `# 工作日记：YYYY年MM月DD日（周X）` |
 
-### 写盘前必做的校验
+### 写盘前必做的校验(标点门, P0)
 
-写完日记内容,**写盘前**(commit 前)跑下列命令(用 Bash 工具)。
-
-**正解(memory `reference_macos_grep_locale` 沉淀)**: 用 `rg` + alternation 一条命令查残余,「空 + exit 1 = 干净」直接读,**不用 `|| true`**(`|| true` 实测拦不住 Bash 工具 truncation;rg/grep 无命中 exit 1 会截后续 stdout,即使有 guard)。
+写完日记、**写盘后 commit 前**,用专用脚本查中文标点残余。脚本按真 unicode 字符匹配(天然区分全 / 半角、不踩 macOS locale),覆盖全部半角标点(不只 `**bold**:` + 破折号),是磁盘文件、不会被上下文渲染吞符号。
 
 ```bash
-F="$WORKLOG/diaries/$D.md"  # 用 Step A 算出的 $D 变量 + WORKLOG 锚点
-
-# 残余检查(应无输出;命中即问题、空 + exit 1 即全清,不需 || true)
-# 一次查两类:**加粗段**: 后跟半角:,以及 em-dash 残留(规范符号引用语境除外)
-rg -n '\*\*[^*]+\*\*:|—' "$F"
+WORKLOG="$HOME/Desktop/Claude-Project/worklog"          # 锚点自带重设, 防 cwd 漂移
+F="$WORKLOG/diaries/$D.md"; [ -f "$F" ] || echo "⚠️ 目标日记不存在: $F"
+PUNCT=~/.claude/skills/worklog-ingest/scripts/punctuation_check.py   # 路径随 skill 安装位置
+python3 "$PUNCT" "$F"
+# exit 0 = 干净直接进 commit; exit 1 = 逐行打印 路径:行号:[类型] 上下文
 ```
 
-**有命中(任一行打印),跑 perl 批量修**(**纯字节模式,不加 `-CSD`**;**替换符必须用全角中文冒号 `:` U+FF1A,不是半角 `:`**):
+**有残余(exit 1) → 一棵决策树(按命中数走)**:
+
+1. **命中 1 至 5 处(常态) → 直接 Edit / Python 单点改, 不跑 perl**。逐行对脚本打印的行号改: 半角 → 全角(`，：（）；！？`), 破折号 `—` / `——` 按语义换 `，` / `：` / `（…）`。Edit 输全角被规范化成半角时改用 Python `\uXXXX` escape 写。改完**重跑脚本**验证。
+2. **大量机械残余(罕见) → 才考虑 perl, 但 ⚠️ 必须从磁盘真文件取命令**(`grep -n 's/' "$PUNCT/../SKILL.md"` 之类), **绝不照抄 SKILL.md 渲染进上下文的版本**(`$1` / `$1$2` 会被插值吞掉、把 `**加粗段**:` 删成单个 `：`; perl 块见文末「附录」)。跑 perl 一次后立即重跑脚本 + 抽验加粗标签存活(`grep -c '\*\*做了什么\*\*' "$F"`); 被吞 → 立即 `git checkout -- "$F"` 回滚、切 Python, 绝不重试同一 perl。
+3. **两轮修不干净 → 写 `.ingest-status.md` 卡点 + 终端告警 + 仍 commit + push**(不阻塞)。**绝不无限循环。**
+
+> 误报说明: 脚本对代码 / 路径 / 比例 / 时间 / wikilink / 链接已做保护, 正常 0 误报。
+
+**commit message 也过门**(commit 不可改 = 破折号污染不可逆): commit 标题用 **`--commit` 模式只 gate 破折号**(标题里 `ingest:` 的 ASCII 冒号、`日记(主线)` 的括号是 commit 惯例、不套日记正文规则)。实际命令在 D.4 commit 块。
+
+**附录: perl 批量修(最后手段, 仅大量机械残余时用; 首选仍是上面决策树第 1 条 Python / Edit 单点改)**
+
+⚠️ **此块的 `$1` / `$1$2` 反向引用, 照抄 SKILL.md 渲染进上下文的版本会被插值吞掉**(replacement 只剩 `：`、把整个 `**加粗段**:` 删成单个 `：`)。**必须 `grep -n 's/' <本 skill 的 SKILL.md>` 从磁盘真文件取**、确认含 `$1` 再跑; 跑后立即重跑标点脚本 + 抽验加粗标签存活, 被吞即 `git checkout -- "$F"` 回滚切 Python。纯字节模式不加 `-CSD`; 替换符是全角中文冒号 `：`(U+FF1A):
 
 ```bash
 perl -i -pe '
-  s/(\*\*[^*\n]+\*\*):/$1：/g;                  # **加粗段** 半角: → **加粗段** 全角：
-  s/(^|\n)(#+[^\n]*?) — /$1$2：/g;              # 标题里的 ` — ` → 全角：（优先,避免被下面通配吃掉）
-  s/ —— /：/g;                                  # 「内容 —— 内容」 → 全角：
-  s/ — /：/g;                                   # 「内容 — 内容」 → 全角：
-  s/——/：/g;                                    # 紧贴双 em-dash → 全角：
+  s/(\*\*[^*\n]+\*\*):/$1：/g;                  # **加粗段** 半角: → 全角：
+  s/(^|\n)(#+[^\n]*?) — /$1$2：/g;              # 标题里的 ` — ` → 全角：
+  s/ —— /：/g; s/ — /：/g; s/——/：/g;            # 内容间破折号 → 全角：
 ' "$F"
 ```
 
-**校验失败兜底**(P0,加 v2.7.22):
-
-- 重跑 `rg` 仍有命中 → **至多再跑 1 次 perl**(N=2 上限,防死循环或二次破坏)
-- 仍有命中 → **写 `.ingest-status.md` 卡点 + 终端打印告警 + 仍执行 commit + push**(不阻塞,让 Maxwell 醒来人工处理)
-- **绝不无限循环跑 perl**
-
-**`.ingest-status.md` sample(标点残余兜底场景,跟 Step E 错误路径例子同格式)**:
-
-```markdown
-# .ingest-status.md (Maxwell 醒来读)
-
-## 卡点
-标点残余 N 处,perl 跑 2 次后仍有(可能 quote 规范文本或边界 case):
-
-  diaries/2026-05-27.md:42:- **xhs**: ...
-  diaries/2026-05-27.md:88:某段含 —— 破折号
-  (rg 输出原样贴)
-
-## 已完成
-- diaries/$D.md (已 commit)
-- wiki + projects (已 commit)
-- push (已成功)
-
-## 待做
-- 人工 review 上述行号: quote 引用规范(可保留)/ 真残余(改全角:)
-
-## 复现
-rg -n '\*\*[^*]+\*\*:|—' "$WORKLOG/diaries/$D.md"
-```
-
-修完再跑 `rg` 验证应无输出(日记产物里不该有破折号;若用户 brain-dump 中 quote 规范说明产生破折号字面,引言块说明并放过这部分)。
+`.ingest-status.md` 卡点格式见 Step E 错误路径例子(贴标点脚本输出原样 + 待人工 review 行号 + 复现命令 `python3 "$PUNCT" "$F"`)。
 
 ---
 
@@ -762,6 +779,7 @@ rg -n '\*\*[^*]+\*\*:|—' "$WORKLOG/diaries/$D.md"
 
   其余触发联想(遇坑再查):
   - 不用破折号 → 全局 `~/.claude/CLAUDE.md`「中文写作规范」
+  - 面试录音归档 / 复盘 / 对外猎头反馈 → `feedback_interview_recording_archival`
   - 项目主动归档 → `feedback_project_archive_workflow`
   - 老面试归档规则 + fade out → `feedback_old_interview_close_rule`
   - 知识库 git 严禁 SSH 私钥 → `feedback_no_secrets_in_worklog_git`
