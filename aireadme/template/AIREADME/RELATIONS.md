@@ -1,4 +1,4 @@
-# RELATIONS — <项目>
+# RELATIONS：<项目>
 <!-- 生态连接。出向用相对路径 ../<proj>/AIREADME/。共享底座写在属主项目根 AIREADME，这里只指向属主。 -->
 
 ## 出向依赖（我用了谁）

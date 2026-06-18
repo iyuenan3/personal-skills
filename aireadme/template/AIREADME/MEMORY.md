@@ -1,4 +1,4 @@
-# MEMORY — <项目>
+# MEMORY：<项目>
 <!-- 踩坑/失败/事故，append-only。别重复踩坑。决策→DECISIONS。 -->
 
 <!-- 模板：

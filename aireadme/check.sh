@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AIREADME lint — 在项目根运行：bash ~/.claude/skills/aireadme/check.sh [AIREADME_DIR]
+# AIREADME lint，在项目根运行：bash ~/.claude/skills/aireadme/check.sh [AIREADME_DIR]
 #   漂移检查：bash ~/.claude/skills/aireadme/check.sh --drift [AIREADME_DIR]   # 在项目 git 仓内跑，算 AIREADME 落后 HEAD 多少 commit
 # 退出码：🔴 问题 → exit 1；🟡 advisory / drift 信息 → exit 0。
 set -uo pipefail

@@ -1,4 +1,4 @@
-# CHANGELOG — <项目>
+# CHANGELOG：<项目>
 <!-- 版本史，倒序，append-only。为何→DECISIONS；未来→ROADMAP；commit 流水→git；踩坑→MEMORY。 -->
 
 <!-- 模板：

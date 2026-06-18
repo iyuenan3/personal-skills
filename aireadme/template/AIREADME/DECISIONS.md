@@ -1,4 +1,4 @@
-# DECISIONS — <项目>
+# DECISIONS：<项目>
 <!-- ADR，append-only，只追加不改历史。运行时事故→MEMORY。 -->
 
 <!-- 模板：

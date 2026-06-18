@@ -1,4 +1,4 @@
-# ARCHITECTURE — <项目>
+# ARCHITECTURE：<项目>
 <!-- 内部结构 + 不能动什么。决策理由→DECISIONS(这里只放结论+链接)；对外契约→SPEC。 -->
 
 ## 组件 + 数据流

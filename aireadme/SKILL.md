@@ -3,13 +3,13 @@ name: aireadme
 description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生跨项目文档体系）。当用户说"给这个项目写/更新 AIREADME""按 AIREADME 标准建文档""scaffold AIREADME""检查 AIREADME"时使用；新项目立项铺骨架也用它。会读同目录 STANDARD.md 的逐文件规范，扫描本项目（含其 Claude Code 项目记忆，若有）后产出/更新 AIREADME/，并"提议"把 CLAUDE.md 瘦成 router（不自动改）。不用于日常 commit / 日记记录类工作流。
 ---
 
-# AIREADME — AI 原生跨项目文档体系
+# AIREADME：AI 原生跨项目文档体系
 
 为每个项目维护一个 `AIREADME/` 文件夹 = 该项目的 **AI 真相源**。双用途：
-1. **跨项目了解** — 别的项目读 `../<proj>/AIREADME/` 搞懂本项目（架构 / 部署 / 契约）。
-2. **防偏差** — 本项目自己的 agent 读 CORE / DECISIONS / ARCHITECTURE，不跑偏。
+1. **跨项目了解**：别的项目读 `../<proj>/AIREADME/` 搞懂本项目（架构 / 部署 / 契约）。
+2. **防偏差**：本项目自己的 agent 读 CORE / DECISIONS / ARCHITECTURE，不跑偏。
 
-逐文件"写什么 / 不写什么 / 何时更新 / 哪些 N/A"的完整规范在**同目录 `STANDARD.md`**——执行任何模式前**必读它**。
+逐文件"写什么 / 不写什么 / 何时更新 / 哪些 N/A"的完整规范在**同目录 `STANDARD.md`**；执行任何模式前**必读它**。
 
 ## 模式
 
@@ -22,7 +22,7 @@ description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生
 ## init 流程
 
 1. **读 `STANDARD.md`** 拿 12 文件规范 + 边界表 + 项目类型 N/A 矩阵 + 占位规范。
-2. **判项目类型**（code / infra / docs·meta / product）→ 按 STANDARD 矩阵定哪些文件实写、哪些 N/A 占位。**monorepo（多 app/包）仍只建一份根 AIREADME**——子 app/包是组件、在 ARCHITECTURE 描述，不各自建 AIREADME。
+2. **判项目类型**（code / infra / docs·meta / product）→ 按 STANDARD 矩阵定哪些文件实写、哪些 N/A 占位。**monorepo（多 app/包）仍只建一份根 AIREADME**，子 app/包是组件、在 ARCHITECTURE 描述，不各自建 AIREADME。
 3. **摸清本项目**（素材来源）：
    - repo 结构（`find -maxdepth 2`，排除 `node_modules/` `vendor/` `upstream/` 等 vendored 目录）、`README.md`、`docs/`、已有 `PRD/SPEC/INFRA/ROADMAP/OPS/USAGE/ARCHIVE`
    - 配置：`package.json` / `Cargo.toml` / `docker-compose.yml` / `.env.example` / `CLAUDE.md`
@@ -31,7 +31,7 @@ description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生
 4. **已有文档定归属**（成熟 repo 关键，**这步只决定、不删**）：repo 已有 PRD/SPEC/INFRA/OPS/USAGE/ARCHIVE 等 → **按内容拆、不按文件名**（一个旧 doc 常跨多个 AIREADME 文件，映射见 STANDARD「旧文档迁入」）：重叠的标记**蒸馏迁入**、例外标记**指向/保留**，**绝不复制**（红线 4）。**vendored / 上游目录**（`upstream/` `vendor/` 等）：不吸收其 README/CLAUDE/LICENSE，ARCHITECTURE 记「vendored 依赖 + 指向该目录」；**上游身份若敏感 → scrub 禁词**，别写进任何 AIREADME 文件。
 5. **拷 `template/AIREADME/` 到项目根 `AIREADME/`**，逐文件按 STANDARD 填（**先把 Step 4 标「迁入」的内容迁进来；删根延到 Step 7**）：
    - 无内容的留**语义占位**（写"将放什么 + 为何空 + 现状猜测"，不留裸 TODO）。
-   - **导入即去链**（源文档若含 `[[wikilink]]`〔Obsidian 等〕或其它内部链接，不照抄，AIREADME 要可携带）：按链接目标分三类 —— ① 本仓库 / 本地知识库内部页 / **项目记忆文件** → 内容**迁入**对应 AIREADME 文件或转**纯文本**（**绝不**编造成 `../x/AIREADME/` 死链）；② 真·别的项目仓库 → `../<proj>/AIREADME/`；③ 格式示例（`[[YYYY-MM-DD]]`、`[[slug]]` 之类占位）→ **原样保留**。
+   - **导入即去链**（源文档若含 `[[wikilink]]`〔Obsidian 等〕或其它内部链接，不照抄，AIREADME 要可携带）：按链接目标分三类：① 本仓库 / 本地知识库内部页 / **项目记忆文件** → 内容**迁入**对应 AIREADME 文件或转**纯文本**（**绝不**编造成 `../x/AIREADME/` 死链）；② 真·别的项目仓库 → `../<proj>/AIREADME/`；③ 格式示例（`[[YYYY-MM-DD]]`、`[[slug]]` 之类占位）→ **原样保留**。
 6. **跨项目 / 共享底座**：
    - RELATIONS 出向用 `../<proj>/AIREADME/`。
    - **每个项目只有一份 AIREADME（项目根），不抽独立子节点。** 共享底座（共享 Caddy / 域名路由 / 公共库，即便已在 `proj/edge/` 之类子目录里）→ 写进**属主项目根 AIREADME** 的 DEPLOYMENT/RELATIONS；消费方 RELATIONS 指向属主项目 `../<owner>/AIREADME/`。在报告里点名共享关系。

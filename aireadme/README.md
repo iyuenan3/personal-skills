@@ -1,13 +1,13 @@
 # AIREADME
 
-为每个项目维护一份 `AIREADME/` —— 该项目的 **AI 真相源**（AI-native 跨项目文档体系）。一个 [Claude Code](https://claude.com/claude-code) skill。
+为每个项目维护一份 `AIREADME/`，该项目的 **AI 真相源**（AI-native 跨项目文档体系）。一个 [Claude Code](https://claude.com/claude-code) skill。
 
 ## 是什么 / 为什么
 
 项目变多、互相调用变密后，AI agent（和人）需要快速搞懂「项目 A 的架构 / 部署 / 对外契约」，而不必啃它整个 repo。AIREADME 把这些散落的真相收进每个项目根的 **12 个固定文件**，双用途：
 
-1. **跨项目了解** —— 别的项目读 `../<proj>/AIREADME/` 就懂你（架构 / 部署 / 契约）。
-2. **防偏差** —— 项目自己的 agent 读 `CORE` / `DECISIONS` / `ARCHITECTURE`，不跑偏。
+1. **跨项目了解**：别的项目读 `../<proj>/AIREADME/` 就懂你（架构 / 部署 / 契约）。
+2. **防偏差**：项目自己的 agent 读 `CORE` / `DECISIONS` / `ARCHITECTURE`，不跑偏。
 
 核心约束：**一条信息只进一个文件**（边界规则防腐烂）；**一项目一份 AIREADME**，不抽独立子节点；**key / secret / PII 绝不进**任何 AIREADME 文件。
 
@@ -33,13 +33,10 @@
 ## 安装
 
 ```bash
-git clone https://github.com/iyuenan3/personal-skills.git
-cp -r personal-skills/aireadme ~/.claude/skills/
+git clone https://github.com/iyuenan3/aireadme-skill.git ~/.claude/skills/aireadme
 ```
 
-即把本子目录放到 `~/.claude/skills/aireadme/`，Claude Code 会自动识别该 skill。
-
-> 仓库历史：2026-05-25 首发时仓名为 `aireadme-skill`，2026-05-28 monorepo 化后改名为 `personal-skills`，aireadme 迁入子目录。GitHub 永久 redirect 老 URL，老地址 clone 仍可用。
+即把本仓库放到 `~/.claude/skills/aireadme/`，Claude Code 会自动识别该 skill。
 
 ## 用法
 
@@ -47,9 +44,9 @@ cp -r personal-skills/aireadme ~/.claude/skills/
 
 | 现状 | 模式 |
 |---|---|
-| 项目还没 `AIREADME/` | **init** —— 首次生成 |
-| 已有 `AIREADME/` | **update** —— 按 git delta 增量更新 |
-| 「检查 / lint」 | **check** —— 跑 `check.sh` |
+| 项目还没 `AIREADME/` | **init**，首次生成 |
+| 已有 `AIREADME/` | **update**，按 git delta 增量更新 |
+| 「检查 / lint」 | **check**，跑 `check.sh` |
 
 init 后的项目结构：
 
