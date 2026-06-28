@@ -53,7 +53,7 @@ Step E: 终端打印完成清单 / 错误状态(用户晨起读)
 
 **使用场景**： Maxwell 在**睡前**触发本 skill，触发消息里**附带当天信息**（「有什么工作 / 哪台机器没工作 / 发生什么事」），**敲回车发送后即去睡觉、不在线**。由此：
 
-- **铁律：永不以提问结尾、永不阻塞等用户回话** —— 一律一口气跑到 commit + push。问一句 = 挂一整晚、什么都不会跑 = 失败。
+- **铁律：永不以提问结尾、永不阻塞等用户回话**，一律一口气跑到 commit + push。问一句 = 挂一整晚、什么都不会跑 = 失败。
 - **触发消息 = 完整 brain-dump**： 用户说的就是全部输入，直接解析、不回问；纯「记录今天」无任何附带信息时也照默认跑、不挂起（Step E 标一句「未附带信息、按默认跑、请核对」）。
 - **没提到的项一律走默认值**（见下表），不追问、不臆造。
 - **遇到任何歧义**： 用规则 / 默认自己拍 + 日记标 ⚠️ + 必要时写 `.ingest-status.md`，**绝不停下提问**。
@@ -213,7 +213,7 @@ else
 fi
 
 # ---- 2.1 漏记前几天缺口检测（非阻塞；逻辑属 D 计算后，置此因依赖 SCAN_PROJECTS 作用域）----
-# 6/17 拖到 6/18 才补、靠用户提醒的教训。最近 7 天内逐日查: 无日记但各项目当天有 commit → Step B 主动问。
+# 6/17 拖到 6/18 才补、靠用户提醒的教训。最近 7 天内逐日查: 无日记但各项目当天有 commit → Step E 被动标一行(默认不补、不追问、晨起自行决定)。
 # 逐日查日记存在性(非「最后一篇之后」), 尾部缺口 + 中间空洞(6/15、6/17 有但 6/16 无)都能抓。
 # ⚠️ B2 局限(2026-06-27 标注): gtot 只数本地 .git commit, 对「只做了远程主线(CarysCloud / cfr)、本地 0 commit」的缺口日恒判 gtot=0、原本静默 = 假 all-clear(漏记最高价值工作流)。
 #   故对每个无日记缺口日: gtot>0 → 报本地 commit 数; gtot==0 → 仍打一行常驻提示(本地无 commit 不等于没干活、远程未计入), 让用户自行回忆远程是否漏记。无 git 项目同理只能靠这行兜。
@@ -270,7 +270,7 @@ fi
 YUENAN_SKIP=""   # 仅当用户明说 yuenan-mbp 没工作时由 agent 置 1（默认空 = 始终扫）
 if [ -z "$YUENAN_SKIP" ]; then
   yc=$(ssh -o ConnectTimeout=8 yuenan-mbp "echo YUENAN_REACHABLE; \
-    [ -x ~/Desktop/yuenan-scan.sh ] && ~/Desktop/yuenan-scan.sh '$D' || echo YUENAN_SCAN_MISSING" 2>/dev/null)
+    if [ -x ~/Desktop/yuenan-scan.sh ]; then ~/Desktop/yuenan-scan.sh '$D'; else echo YUENAN_SCAN_MISSING; fi" 2>/dev/null)
   case "$yc" in
     *YUENAN_SCAN_MISSING*) echo "=== yuenan-mbp ⚠️ 可达但 yuenan-scan.sh 缺失/不可执行 → 引言块标、勿当 0 改动 ===" ;;
     YUENAN_REACHABLE*) printf '=== yuenan-mbp 工作机 (可达) ===%s\n' "${yc#YUENAN_REACHABLE}" ;;
@@ -578,7 +578,7 @@ git -C "$HOME/Desktop/Claude-Project/worklog" push
 
 没拿到的信息绝不脑补（数字 / 时间 / 决策细节 / 量化效果）。
 - 素材有 → 写
-- 素材缺关键信息 → Step B 已经问过了；还是缺就标 ⚠️
+- 素材缺关键信息 → 触发消息已尽力提取、扫描也无据；仍缺就标 ⚠️（不脑补、不回问）
 - Maxwell 说「大概 / 应该」→ 不写绝对量化，改「初步看 / 待验证」
 
 ### 7. 写决策的「为什么」，不复述 git log
