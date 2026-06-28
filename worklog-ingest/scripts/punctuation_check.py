@@ -18,7 +18,7 @@
 4. 半角括号 ( ) 前邻 CJK 或括号内含 CJK（func(x) 纯 ASCII 括号不误报）
 5. 加粗段 **X** 后跟半角 , : ; ! ?
 保护区（不检测）: frontmatter（开头第一对 ---，未闭合则不当 frontmatter）/ 代码围栏 ```（未闭合则告警并当 prose）/
-行内代码 `...` / [[wikilink]] / [文本](链接) / 裸 URL（URL 在 CJK / 中文标点边界停，不吞 prose）。
+行内代码 `...` / [[wikilink]] / [文本](链接) / 裸 URL（URL 在 CJK / 中文标点边界停，不吞 prose）/ conventional-commit 主题前缀 type(scope):（Git 提交段 verbatim）。
 """
 import re
 import sys
@@ -31,6 +31,9 @@ _RE_WIKILINK = re.compile(r'\[\[[^\]]*\]\]')
 _RE_MDLINK = re.compile(r'\[[^\]]*\]\([^)]*\)')
 # URL 结尾在空白 / 中文 / 中文标点 / 半角逗号分号处停，避免吞掉紧邻的中文 prose（如 "见 https://x.com,已部署"）
 _RE_URL = re.compile(r'https?://[^\s' + CJK + r'，。、；：！？（）「」,;]+')
+
+# conventional-commit 主题前缀 type(scope): (「### Git 提交」段 verbatim 引用提交主题, 其 ASCII 冒号不是 prose 半角、改全角即篡改被引用的提交信息; round-3 review)
+_RE_CC_PREFIX = re.compile(r'\b[a-z][a-z0-9]*(?:\([^()\n]*\))?: ')
 
 _RE_EMDASH = re.compile(r'—')
 # CJK 紧邻(可含一个空格)半角逗号/分号/叹号/问号
@@ -45,6 +48,7 @@ def _strip_protected(line):
     line = _RE_WIKILINK.sub(' ', line)
     line = _RE_MDLINK.sub(' ', line)
     line = _RE_URL.sub(' ', line)
+    line = _RE_CC_PREFIX.sub(' ', line)
     return line
 
 

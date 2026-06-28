@@ -30,12 +30,12 @@ description: worklog 自主 ingest agent。用户睡前说「记录今天 / 记�
 | 模式 | Step A 自扫 | Step B 解析（不提问） | D.1 写日记 | D.2 更 wiki | D.3 TODO 盘点 | D.4 commit message |
 |---|---|---|---|---|---|---|
 | **新增** | 完整跑 | 解析触发消息附带信息 + 默认值填空 | 整篇 Write（**前置：文件不存在**） | 全跑（index 头部 / 项目表 / 日记表 + log + 各活跃项目页决策日志） | 全跑（4 态盘点） | `ingest: M/D 日记(<主线>)` |
-| **补充** | 只扫增量（上次 ingest 后的新 commit） | 解析触发消息的增量信息 + 默认 | append 到现有日记尾部 | **有实质增量工作才跑增量**：刷 index 头部当日摘要 + 触及项目页决策日志 + log 追加补记说明；trivial 补充（如补 1 个 docs commit）可只动 diary + 该项目页计数 | 有 TODO 状态变化才跑，否则塌指针（见 E2） | `ingest-补: M/D <增量主题>` |
+| **补充** | 全窗口扫（无增量锚点，靠 D.1 与现有日记比对去重、只 append 未记的） | 解析触发消息的增量信息 + 默认 | append 到现有日记尾部 | **有实质增量工作才跑增量**：刷 index 头部当日摘要 + 触及项目页决策日志 + log 追加补记说明；trivial 补充（如补 1 个 docs commit）可只动 diary + 该项目页计数 | 有 TODO 状态变化才跑，否则塌指针（见 E2） | `ingest-补: M/D <增量主题>` |
 | **更新** | Skip A | 解析触发消息里要改什么（信息不全则按字面理解 + 标 ⚠️，不提问） | 定向 Edit 已有日记 | 默认 **diary-only 不动 wiki**；除非订正的是已镜像到 wiki 的事实（计数 / 项目页摘要 / 日期归属），则同步那一处保持一致 | 默认不跑；除非订正本身涉及 TODO 状态 | `ingest-改: M/D <修改点>` |
 
 > **补充模式的 wiki 永久漂移注意**：次日 ingest 只记次日、不会回捕今天补充时漏更的 wiki 增量 → 补充模式当下该更的 index 摘要 / 项目页决策日志若跳过，就**永久漏记**（不像 diary 还能再补充）。所以补充模式的 D.2「有实质工作才跑」要从严判断：宁可多刷一句 index 摘要，别留 wiki 与 diary 不一致。trivial 跳过的也要在 commit message 里说清跳了什么。
 
-**触发后立刻进入 5 步流程，全程无人值守、永不阻塞提问**：
+**触发后立刻进入 5 步流程（A–E，= `AIREADME/ARCHITECTURE` 6 步契约的实现），全程无人值守、永不阻塞提问**：
 
 ```
 Step A: 后台自扫数据源
@@ -140,7 +140,8 @@ else
   MODE="新增"
   echo "✓ diaries/$D.md 不存在 → 模式 = 新增"
 fi
-# 若用户触发语与实测冲突(如「补充今天」但文件不存在),按上方 fallback 规则修正 MODE
+# 若用户触发语与实测冲突(如「补充今天」但文件不存在),按上方 fallback 规则修正 MODE。
+# 触发语=「更新日记」时强制 MODE=更新(文件必存在,不走补/新增二分;仅跑 §0.1 算 D + 本块定模式,跳过 §1-5 数据源自扫)。
 
 # ---- 1. 真实日期对齐（防 compact summary 跨天压成一天）----
 git -C "$WORKLOG" log --date=short --pretty=format:'%h %cd %s' -20
@@ -265,7 +266,7 @@ fi
 # 默认有工作 = 始终跑; 仅当触发消息明说「yuenan-mbp 没工作」, agent 把 YUENAN_SKIP=1 才跳过。
 # 哨兵 YUENAN_REACHABLE 剥「可达 0 改动 vs 不可达」; 脚本尾 YUENAN_SCAN_WORKSPACES=N 确认真跑到 + 发现 N 个工作区; YUENAN_SCAN_MISSING = 可达但脚本没部署/坏。
 # ⚠️ 2026-06-08 起雇主项目私仓内与其他项目同等详记（日记 + caryscloud.md/对应项目页）；保留：① 项目页 RAG 排除(挡公开主页) ② 团队成员真名抽象
-#    ③ 公开镜像 personal-skills 同步时脱敏雇主名/主机/脚本（见 memory feedback_ingest_caryscloud_via_yuenan_mbp）。
+#    ③ 公开镜像同步时按既定脱敏策略处理。
 # 脚本本体只活在 yuenan-mbp（含雇主目录/仓名/分支模式/署名），不进 worklog 仓、不进公开镜像（同 daily-digest.sh 先例）；改扫描逻辑改远端脚本、新项目零改 skill（auto-discover）。
 YUENAN_SKIP=""   # 仅当用户明说 yuenan-mbp 没工作时由 agent 置 1（默认空 = 始终扫）
 if [ -z "$YUENAN_SKIP" ]; then
@@ -294,8 +295,8 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 - **跨日延续**：凌晨提交 (00:00-06:59) 归前一天，扫描窗口要覆盖。
 - **本机扫不到的盲区**： Yuan-MBP cfr（**默认无、维护收尾**，仅用户提才抓）+ yuenan-mbp 工作机（**默认有**，yuenan-scan.sh 自动发现桌面所有工作项目扫，私仓详记）+ 其他全靠触发消息附带信息。
-- **yuenan-mbp scan = 输入**： §3.5 调远端 `yuenan-scan.sh $D` 返回的各工作项目段（有 digest 的工作区跑 digest 4 信号 / 其余跑 yuenan 分支 git-log + CHANGELOG）作当天理解输入；**2026-06-08 起与其他项目同等详记（私仓）**，保留对应项目页 RAG 排除 + 团队成员真名抽象 + 公开镜像脱敏（见 memory `feedback_ingest_caryscloud_via_yuenan_mbp`）。
-- **yuenan-mbp 桌面 auto-discover（2026-06-27 起根治）**： yuenan-mbp = 工作机，桌面工作项目会持续增多（现 3 个 CarysCloud 工作区，每个含多 git 子仓；未来会建新项目）。**不再每新增一个工作区粘一块 §3.5x**（6/12 AllinOne、6/27 DAG 两次首日漏扫的教训）：远端 `yuenan-scan.sh` glob `~/Desktop/*` 自动发现所有工作项目 + 按口径分流（digest / yuenan 分支 git-log）+ `*/.git` glob 自动发现子仓，**新项目 / 新仓零改 skill 自动纳入**；非工作区目录（如 feishu 文档缓存）自动跳过。CarysCloud 系归 [[caryscloud]] 项目页分子线记；新发现的非 CarysCloud 项目按内容判断归属（caryscloud 子线 vs 新建项目页），拿不准 Step E 标一句让用户晨起定，默认按工作机私有处理。**脚本本体只活在 yuenan-mbp**（雇主目录 / 仓名 / 分支模式 / 署名都在远端），故 SKILL.md 内无逐项目雇主坐标，公开镜像 personal-skills 只需脱敏 §3.5 一块的主机名 + 脚本名（见 memory `reference_personal_skills_monorepo` / `feedback_ingest_caryscloud_via_yuenan_mbp`）。
+- **yuenan-mbp scan = 输入**： §3.5 调远端 `yuenan-scan.sh $D` 返回的各工作项目段（有 digest 的工作区跑 digest 4 信号 / 其余跑 yuenan 分支 git-log + CHANGELOG）作当天理解输入；**2026-06-08 起与其他项目同等详记（私仓）**，保留对应项目页 RAG 排除 + 团队成员真名抽象 + 公开镜像脱敏。
+- **yuenan-mbp 桌面 auto-discover（2026-06-27 起根治）**： yuenan-mbp = 工作机，桌面工作项目会持续增多（现 3 个 CarysCloud 工作区，每个含多 git 子仓；未来会建新项目）。**不再每新增一个工作区粘一块 §3.5x**（6/12 AllinOne、6/27 DAG 两次首日漏扫的教训）：远端 `yuenan-scan.sh` glob `~/Desktop/*` 自动发现所有工作项目 + 按口径分流（digest / yuenan 分支 git-log）+ `*/.git` glob 自动发现子仓，**新项目 / 新仓零改 skill 自动纳入**；非工作区目录（如 feishu 文档缓存）自动跳过。CarysCloud 系归 [[caryscloud]] 项目页分子线记；新发现的非 CarysCloud 项目按内容判断归属（caryscloud 子线 vs 新建项目页），拿不准 Step E 标一句让用户晨起定，默认按工作机私有处理。**脚本本体只活在 yuenan-mbp**（雇主目录 / 仓名 / 分支模式 / 署名都在远端），故 SKILL.md 内无逐项目雇主坐标，公开镜像 personal-skills 只需脱敏 §3.5 一块的主机名 + 脚本名。
 - **SSH 不可达**： Yuan-MBP / yuenan-mbp 合盖休眠等情况，日记引言块标 ⚠️「<机器> SSH 不可达，远程工作待 X+1 补抓」（参考 5/26 / 6/4 日记）。不阻塞，Step E 不报错。
 - **AIREADME 漂移雷达（§2.5）**： 对今日活跃 + 本地有 `AIREADME/` 的项目，复用 `aireadme/check.sh --drift` 算 AIREADME 落后 HEAD 多少 commit，漂移项转述进 Step E 报告。**只暴露不自动改**（`/aireadme update` 有确认门）。解决 AIREADME「init 做到位、update 没人记得跑」导致的无声漂移。远程项目（cfr / CarysCloud）无本地 AIREADME，不在范围。**内容新鲜度门（2026-06-27 加）**： 报「落后」前先查该项目 `AIREADME/` 今日窗口内有无 commit，有则抑制（= 自有 session 项目如 [[petslog]] / [[<client-proj-a>]] 自己在维护 AIREADME、worklog 侧锚点不 bump 致恒报「落后」是噪音；建议的 `/aireadme update` 也是项目 session 职责、非 ingest 操作者能跑）。用真实新鲜度替代按所有权手维护 skip 名单，自动覆盖未来项目，且不误伤 worklog 自身（今日 AIREADME 没 commit → 照常报）。
 
@@ -339,7 +340,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 **补充模式**：
 ```
-增量收到(自上次 ingest 多 N commits + 触发消息 K 项)。
+增量收到(本窗口 X commits, D.1 比对现有日记后只 append 未记的 + 触发消息 K 项)。
 追加到 diaries/$D.md 尾部, commit `ingest-补: M/D <增量主题>`。
 ```
 
@@ -366,7 +367,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 - **todos.md 主存储由 D.3 全权拥有**： D.2 不重复操作 todos.md（避免与 D.3 双重操作不一致）。
 - **D.1 概览灵魂句一旦写定**(`> **主线 = ...**`)、Step E 终端打印的「主线」回顾**直接 quote 这一句**，不要二次造句产生 drift。
 
-### D.1 生成日记 `diaries/YYYY-MM-DD.md`
+### D.1 生成日记 `diaries/YYYY-MM-DD.md`（执行序第 2 步，依赖 D.3 盘点结果）
 
 按下面「核心 judgment」+「输出契约」编译。一气呵成，**写盘前必跑校验**（见输出契约段）。
 
@@ -395,7 +396,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 > **注**： `wiki/todos.md` 不在 D.2 处理范围，由 **D.3 全权操作**（避免 D.2/D.3 双重写不一致）。
 
-### D.3 TODO 盘点
+### D.3 TODO 盘点（执行序第 1 步，先于 D.1）
 
 **对每个项目的 TODO 必先读项目 memory + git log 实际进度**，再判断 4 状态：
 
