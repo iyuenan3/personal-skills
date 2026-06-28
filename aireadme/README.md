@@ -33,10 +33,11 @@
 ## 安装
 
 ```bash
-git clone https://github.com/iyuenan3/aireadme-skill.git ~/.claude/skills/aireadme
+git clone https://github.com/iyuenan3/personal-skills.git
+mkdir -p ~/.claude/skills && cp -r personal-skills/aireadme ~/.claude/skills/
 ```
 
-即把本仓库放到 `~/.claude/skills/aireadme/`，Claude Code 会自动识别该 skill。
+把 `aireadme/` 子目录放到 `~/.claude/skills/aireadme/`，Claude Code 会自动识别该 skill。（`mkdir -p` 不能省：`~/.claude/skills/` 不存在时直接 cp 会把内容平铺、skill 注册不上。aireadme 现为 personal-skills monorepo 的子目录，老 URL `aireadme-skill` 已永久 redirect。）
 
 ## 用法
 
@@ -68,7 +69,7 @@ init 后的项目结构：
 bash ~/.claude/skills/aireadme/check.sh [AIREADME_DIR]   # 默认 ./AIREADME
 ```
 
-退出码：🔴 = exit 1（必修）/ 🟡 = advisory（exit 0）。脚本会校验 12 文件齐全、INDEX 状态表 + 同步锚点、未填占位、明文密钥泄漏、边界粗查。需 UTF-8 locale（脚本已自设 `LC_ALL=C.UTF-8`）。
+退出码：🔴 = exit 1（必修）/ 🟡 = advisory（exit 0）。脚本会校验 12 文件齐全、INDEX 状态表 + 同步锚点、未填占位、明文密钥泄漏、边界粗查。脚本自设 `LC_ALL=C`（字节模式，不依赖 UTF-8 locale；macOS 无 C.UTF-8，详见 CHANGELOG v0.2）。
 
 ## 设计原则（节选）
 
@@ -84,4 +85,4 @@ bash ~/.claude/skills/aireadme/check.sh [AIREADME_DIR]   # 默认 ./AIREADME
 
 ## License
 
-[Apache-2.0](LICENSE)。
+[Apache-2.0](https://github.com/iyuenan3/personal-skills/blob/main/LICENSE)。

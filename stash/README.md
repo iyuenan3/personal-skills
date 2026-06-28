@@ -6,13 +6,13 @@
 
 Claude Code 有 per-project 文件记忆（`~/.claude/projects/-<dashed-cwd>/memory/`）。stash 把「这次对话学到、值得下次记住」的编译进去：用户偏好与反馈、项目决策与约束、踩过的坑、外部资源指针。
 
-**显式触发**（`/stash`），不自动跑 ,持久化是写文件的副作用动作，只在用户明确要求时执行。
+**显式触发**（`/stash`），不自动跑，持久化是写文件的副作用动作，只在用户明确要求时执行。
 
 ## 三件套
 
 | 文件 | 作用 |
 |---|---|
-| [`SKILL.md`](SKILL.md) | 主流程 7 步（定位 → 盘点 → 查重 → 判断 → 写盘 → 校验 → 报告） |
+| [`SKILL.md`](SKILL.md) | 主流程 7 步（定位 → 盘点 → 查重 → 判断 → 写盘 → 校验 → 更新 CLAUDE.md（按需）+ 报告） |
 | [`MEMORY_SPEC.md`](MEMORY_SPEC.md) | 记忆规范**单一真相源**（frontmatter schema / 四类 type / 命名 / 互链 / 判断标准），SKILL 和 check.sh 都引用它、不复述 |
 | [`check.sh`](check.sh) | 校验脚本（🔴 block / 🟡 warn），可手动跑、可被 skill 调 |
 
@@ -20,8 +20,10 @@ Claude Code 有 per-project 文件记忆（`~/.claude/projects/-<dashed-cwd>/mem
 
 ```bash
 git clone https://github.com/iyuenan3/personal-skills.git
-cp -r personal-skills/stash ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r personal-skills/stash ~/.claude/skills/
 ```
+
+> `mkdir -p` 不能省：`~/.claude/skills/` 不存在（首次装 skill）时直接 cp 会把内容平铺、skill 注册不上。
 
 ## 用法
 

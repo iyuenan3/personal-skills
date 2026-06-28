@@ -3,7 +3,7 @@
 #   漂移检查：bash ~/.claude/skills/aireadme/check.sh --drift [AIREADME_DIR]   # 在项目 git 仓内跑，算 AIREADME 落后 HEAD 多少 commit
 # 退出码：🔴 问题 → exit 1；🟡 advisory / drift 信息 → exit 0。
 set -uo pipefail
-export LC_ALL=C   # 字节模式：macOS BSD grep 匹配中文字面量靠它（C.UTF-8 在 macOS 不存在 / 默认 locale 静默漏 CJK，见 reference_macos_grep_locale）。下方所有紧贴全角标点的变量必须 ${...} 花括号，否则 bash 3.2 字节模式会把全角字节吃进变量名
+export LC_ALL=C   # 字节模式：macOS BSD grep 匹配中文字面量靠它（C.UTF-8 在 macOS 不存在 / 默认 locale 静默漏 CJK，见 reference_macos_grep_locale）。注意：bash 3.2 裸 $var 吃全角首字节的触发条件是 UTF-8 locale 不是字节模式（LC_ALL=C 反而是旁路）；下方仍全程 ${...} 花括号作防御性双保险（防有人去掉 LC_ALL=C）
 
 # 从 INDEX.md 提同步锚点的「值」（剥 last-synced: 前缀 / 同行 <!--注释--> / ⚑ / 引导 > 空白）
 _anchor_val() {
@@ -13,7 +13,7 @@ _anchor_val() {
   # 全角冒号 ：(3 字节)在 LC_ALL=C 字节模式下不能进 [：:] 字符类(会被按单字节拆、吃半个字符留游离字节、SHA 丢失)，先整体归一成半角
   # 剥标签子句带 //I(BSD/GNU sed 都支持的大小写不敏感)，与上面行首检测 grep -i 口径对齐，免得 Last-Synced/LAST-SYNCED 被检测到却剥不掉前缀
   printf '%s' "$line" \
-    | sed -E 's/：/:/g; s/.*(last-synced|上次同步):?//I; s/<!--.*-->//; s/⚑//g; s/^[[:space:]>]*//; s/[[:space:]]*$//'
+    | sed -E 's/：/:/g; s/<!--.*-->//; s/.*(last-synced|上次同步):?//I; s/⚑//g; s/^[[:space:]>]*//; s/[[:space:]]*$//'
 }
 # 锚点里的 SHA token（行首首个 7-40 位 hex 或 pre-code 哨兵）；取不到回空
 _anchor_sha() {
@@ -53,7 +53,12 @@ DIR="${1:-AIREADME}"
 files=(INDEX CORE RELATIONS SPEC ARCHITECTURE DEPLOYMENT PRD ROADMAP CONVENTIONS DECISIONS MEMORY CHANGELOG)
 fail=0
 
-[ -d "$DIR" ] || { echo "🔴 无 $DIR/ 目录（先 init）"; exit 1; }
+# 大小写精确门：默认 APFS/HFS+ 大小写不敏感，[ -d AIREADME ] 会假命中小写 aireadme/（见 pitfalls 库）；用 find 按 dirent 串比对
+if [ "$DIR" = "$(basename "$DIR")" ]; then
+  [ -n "$(find . -maxdepth 1 -type d -name "$DIR" 2>/dev/null)" ] || { echo "🔴 无 $DIR/ 目录（大小写须精确，先 init）"; exit 1; }
+else
+  [ -d "$DIR" ] || { echo "🔴 无 $DIR/ 目录（先 init）"; exit 1; }
+fi
 
 echo "== 12 文件齐全 =="
 for f in "${files[@]}"; do

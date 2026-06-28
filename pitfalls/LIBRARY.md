@@ -63,7 +63,7 @@
 ### 大小写不敏感文件系统下 `[ -d X/AIREADME ]` 假匹配小写目录
 - **症状**：`[ -d "$x/AIREADME" ]` 在默认 APFS/HFS+ 上会命中同目录的小写 `aireadme/`，把非目标当目标。
 - **根因**：macOS 默认 APFS/HFS+ **大小写不敏感**。
-- **正确做法**：别用「目录存在」判真伪，改 gate 一个「只有真目标才有的唯一标志文件」，如 `[ -f "$x/AIREADME/INDEX.md" ]`（标志文件名本身也要避开与小写 decoy 内文件的大小写碰撞）。
+- **正确做法**：① 若小写 decoy 不含碰撞文件，可 gate「只有真目标才有的唯一标志文件」如 `[ -f "$x/AIREADME/INDEX.md" ]`（但标志文件名本身也走大小写不敏感解析，decoy 里有同名异 case 的文件就失效）；② **要真正区分盘上大小写，用 `find`**（按 dirent 串比对、不走 FS lookup）：`[ -n "$(find "$x" -maxdepth 1 -type d -name AIREADME)" ]`，只有盘上真有大写 `AIREADME/` 才非空。
 - **触发场景**：写跨平台 / 可移植 shell 脚本时，Linux（多为大小写敏感 FS）不复现、只在 macOS 翻车。
 
 ### Homebrew Python 装包被 PEP 668 拦 + user site 路径无版本号

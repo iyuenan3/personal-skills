@@ -49,7 +49,7 @@ for f in "$DIR"/*.md; do
   # name（缺失=block；≠stem连字符版 / 缺前缀=warn）
   if [ -z "$name" ]; then errs="$errs 缺name"
   else
-    expect=$(printf '%s' "$b" | sed 's/_/-/g')
+    expect=$(printf '%s' "$b" | tr 'A-Z' 'a-z' | sed 's/_/-/g')
     [ "$name" = "$expect" ] || warns="$warns name≠stem连字符版(=$name 期望$expect)"
     case "$name" in user-*|feedback-*|project-*|reference-*) ;; *) warns="$warns name缺type前缀" ;; esac
   fi
@@ -79,8 +79,8 @@ for f in "$DIR"/*.md; do
 
   # feedback/project 必含 Why + How to apply（中文兜底要带加粗/冒号标记，防裸子串假阳）
   if [ "$the_type" = "feedback" ] || [ "$the_type" = "project" ]; then
-    printf '%s' "$body" | grep -qiE '\*\*Why' || printf '%s' "$body" | grep -qE '\*\*为什么|为什么[:：]' || warns="$warns 缺Why"
-    printf '%s' "$body" | grep -qiE 'How to apply' || printf '%s' "$body" | grep -qE '\*\*如何应用|如何应用[:：]|\*\*怎么用|怎么用[:：]' || warns="$warns 缺HowToApply"
+    printf '%s' "$body" | grep -qiE '\*\*Why' || printf '%s' "$body" | grep -qE '\*\*为什么|为什么：|为什么:' || warns="$warns 缺Why"
+    printf '%s' "$body" | grep -qiE 'How to apply' || printf '%s' "$body" | grep -qE '\*\*如何应用|如何应用：|如何应用:|\*\*怎么用|怎么用：|怎么用:' || warns="$warns 缺HowToApply"
   fi
 
   # [[link]]：带 type 前缀的须在 memory 存在（warn）
@@ -95,6 +95,14 @@ for f in "$DIR"/*.md; do
   [ -n "$errs" ]  && { echo "🔴 $b.md:$errs"; fail=1; }
   [ -n "$warns" ] && { echo "🟡 $b.md:$warns"; warn=1; }
 done
+
+# 反向索引校验：MEMORY.md 里指向不存在文件的孤儿行（改名 / 删除后漏清 → recall 加载悬空指针，红线5「一一对应」的反向半边）
+if [ -n "$index" ]; then
+  for link in $(printf '%s' "$index" | grep -oE '\([a-z0-9_]+\.md\)' | tr -d '()' | sed 's/\.md$//'); do
+    [ "$link" = "MEMORY" ] && continue
+    printf '%s' "$stems" | grep -qFw "$link" || { echo "🟡 MEMORY.md 索引孤儿行 → $link.md（文件不存在，改名 / 删除后漏清）"; warn=1; }
+  done
+fi
 
 echo "----"
 echo "扫描 $nfiles 个 memory"
