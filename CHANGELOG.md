@@ -4,6 +4,17 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-06-28: v0.5.1 第二轮 review 修正
+
+第二轮逐条坑本机对抗式复现 + 修复验证 + 采用者/作品集视角，修掉一批准确性与可用性问题。
+
+### Fixed
+
+- **LIBRARY.md 准确性**：逐条实测后修正 7 条 imprecise。裸变量吃字节的根因纠正（触发是 UTF-8 locale 而非字节模式，`LC_ALL=C` 反而不犯，已实测）；词边界区分 `[[:<:]]` 在 ugrep 静默失配 vs GNU grep 报错；阿里云加速器限定到 docker.io（`registry-mirrors` 不管 GHCR/自建，删误述）；iCloud 条 `rm` 不死锁只慢爬 + 补回 `.nosync` 的 symlink 步骤；Cloudflare 的 HTTP-01 视 SSL 模式而定 + 补 DNS-01 备选；两条 Claude Code 工具行为坑标注版本前提（当前 harness 不复现）。
+- **安装命令静默坑**：pitfalls/README 与根 README 5 个 skill 的 `cp` 命令补 `mkdir -p ~/.claude/skills`（修首次安装时内容平铺、skill 注册不上的坑）；加安装自检 + 全局纪律文件新建兜底 + 澄清「是 Claude 动高危活时来查、不是你手动翻」。
+- **SKILL.md 一致性**：消除「description 自动浮现 vs 只能 /pitfalls」的自相矛盾；加坑模板与 frontmatter 标点全角化。
+- **project-lifecycle.md 作品集打磨**：软化「解法只有一个」；三尺度讲成两条正交轴（跨项目 vs 本地、策展 vs 原始）+ 晋级方向；免疫隐喻补「主动接种」缝；「每晚」加「有进展才聚」限定；加最小上手 + 澄清 story-writer 不在本工作流。
+
 ## 2026-06-28: v0.5 加入 pitfalls + 项目生命周期方法论
 
 ### Added

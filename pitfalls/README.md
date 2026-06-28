@@ -10,25 +10,31 @@
 
 ## 怎么用
 
-- **查**（默认）：写 bash/shell 脚本、改 git 历史、做 macOS 文件/locale 操作、写正则、配 DNS/Docker/反代、用 Read/Edit 改大文件**之前**，扫一眼 [`LIBRARY.md`](LIBRARY.md) 对应域。
+正常模式下，**是 Claude 在动高危活之前自动来查这条库**（写 bash/shell 脚本、改 git 历史、做 macOS 文件/locale 操作、写正则、配 DNS/Docker/反代、用 Read/Edit 改大文件之前），你只需在它建议时放行；你当然也可以自己 `/pitfalls` 翻 [`LIBRARY.md`](LIBRARY.md)。
+
+- **查**：按要干的活定位 [`LIBRARY.md`](LIBRARY.md) 对应域，照「正确做法」改写即将执行的命令。
 - **加**：踩到新坑时，先判断「单项目 vs 通用工程」。通用的按 [`SKILL.md`](SKILL.md) 的统一格式追加进 `LIBRARY.md`；单项目的留给项目自己的记忆（用 [`stash`](../stash/)）。
 
-它是 **pull 模型**：不会自动弹出来，全部价值在于「该查的时候真去查」。
+它是 **pull 模型**：不会自动弹出来，全部价值在于「该查的时候真去查」，所以下面的全局纪律那一步很关键。
 
 ## 安装
 
 ```bash
 git clone https://github.com/iyuenan3/personal-skills.git
-cp -r personal-skills/pitfalls ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r personal-skills/pitfalls ~/.claude/skills/
 ```
 
-**装完务必再做一步**：在全局 `~/.claude/CLAUDE.md` 里加一句 always-on 纪律，例如：
+> `mkdir -p` 不能省：若 `~/.claude/skills/` 还不存在（第一次装 skill），直接 `cp -r ... ~/.claude/skills/` 会把内容平铺成 `~/.claude/skills/SKILL.md`、skill 注册不上（这本身就是「照 README 抄就翻车」的坑）。
+
+**确认装好**：重开一个 Claude Code 会话，skill 列表里应出现 `pitfalls`，或直接试 `/pitfalls`。看不到 = 上一步 cp 落错了位置。
+
+**装完务必再做一步**（让 pull 模型在对的时刻真被触发）：在全局 `~/.claude/CLAUDE.md` 里加一句 always-on 纪律：
 
 ```
 - 写 bash / 改 git 历史 / macOS 文件·locale 操作 / 配 DNS·Docker·反代 / Read·Edit 改大文件前，先查 pitfalls 的 LIBRARY.md。
 ```
 
-没有这一步，harness 只在你显式说 `/pitfalls` 时才浮现本 skill，它不会在「正要写 heredoc」这种高危时刻自动提醒你。这条全局纪律就是让 pull 模型在对的时刻被想起来的关键（即下面阶梯的最顶层）。
+若 `~/.claude/CLAUDE.md` 不存在就新建它（普通 Markdown，手动编辑或让 Claude 帮你加都行）。没有这一步，`description` 只给 harness 一个**偶尔主动想起**本 skill 的机会，对「正要写 heredoc」这种当下时刻并不可靠，你就只能靠显式 `/pitfalls` 了。
 
 随库自带一批种子坑（macOS locale/字节陷阱、git 删改混合、heredoc 引号、Cloudflare 新子域证书、iCloud 同步等），装好即可用，边用边长。
 
@@ -47,4 +53,4 @@ cp -r personal-skills/pitfalls ~/.claude/skills/
 ## 关联
 
 - [`stash`](../stash/)：记**单项目**记忆。与 pitfalls 分工：stash 管「这个项目的事」，pitfalls 管「所有项目都该知道的工程坑」。
-- 本仓 [`project-lifecycle.md`](../project-lifecycle.md)：pitfalls 在整套项目生命周期工作流里扮演「集体记忆 / 舰队免疫」那一环。
+- 本仓 [`project-lifecycle.md`](https://github.com/iyuenan3/personal-skills/blob/main/project-lifecycle.md)：pitfalls 在整套项目生命周期工作流里扮演「集体记忆 / 舰队免疫」那一环。

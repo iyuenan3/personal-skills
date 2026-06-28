@@ -26,7 +26,7 @@ Maxwell 的 [Claude Code](https://claude.com/claude-code) skill 合集。
 
 ```bash
 git clone https://github.com/iyuenan3/personal-skills.git
-cp -r personal-skills/aireadme ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r personal-skills/aireadme ~/.claude/skills/
 ```
 
 详细用法见 [`aireadme/README.md`](aireadme/README.md)。
@@ -34,7 +34,7 @@ cp -r personal-skills/aireadme ~/.claude/skills/
 ### story-writer（通用）
 
 ```bash
-cp -r personal-skills/story-writer ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r personal-skills/story-writer ~/.claude/skills/
 ```
 
 触发词：「写小说」「写短故事」「写故事」「创作小说」「创作故事」「番茄小说」「短篇小说」。详细用法见 [`story-writer/README.md`](story-writer/README.md)。
@@ -42,7 +42,7 @@ cp -r personal-skills/story-writer ~/.claude/skills/
 ### stash（通用）
 
 ```bash
-cp -r personal-skills/stash ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r personal-skills/stash ~/.claude/skills/
 ```
 
 显式触发：`/stash` 或「保存记忆 / 沉淀一下 / 记住这个」。详见 [`stash/README.md`](stash/README.md)。
@@ -50,7 +50,7 @@ cp -r personal-skills/stash ~/.claude/skills/
 ### pitfalls（通用）
 
 ```bash
-cp -r personal-skills/pitfalls ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r personal-skills/pitfalls ~/.claude/skills/
 ```
 
 触发：`/pitfalls`、「查坑 / 避坑」，以及写脚本 / 改 git / macOS 文件操作 / 配部署等高危活前主动自查。随库自带一批种子坑，边用边长。详见 [`pitfalls/README.md`](pitfalls/README.md)。
@@ -58,7 +58,7 @@ cp -r personal-skills/pitfalls ~/.claude/skills/
 ### worklog-ingest（个人 skill）
 
 ```bash
-cp -r personal-skills/worklog-ingest ~/.claude/skills/
+mkdir -p ~/.claude/skills && cp -r personal-skills/worklog-ingest ~/.claude/skills/
 ```
 
 ⚠️ worklog-ingest 包含 Maxwell 个人偏好（memory 路径 / 求职决策 / 工作流默契等 hardcode），公开仅作版本管理 + 参考。**不建议直接使用**，详见 [`worklog-ingest/README.md`](worklog-ingest/README.md)。

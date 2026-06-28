@@ -1,6 +1,6 @@
 ---
 name: pitfalls
-description: 跨项目复用的通用工程踩坑库速查。在写 bash/shell 脚本、改 git 历史、做 macOS 文件/locale 相关操作、写正则/grep、配 DNS/Docker/反向代理部署、用 Read/Edit 改大文件之前,先查 LIBRARY.md,避免在新项目里重踩别的项目早就踩过的坑;也用于把新踩到的「通用工程坑」按统一格式加进库。触发:/pitfalls、「查坑 / 避坑 / 这类坑查一下」,以及上述高危操作前主动自查。
+description: 跨项目复用的通用工程踩坑库速查。在写 bash/shell 脚本、改 git 历史、做 macOS 文件/locale 相关操作、写正则/grep、配 DNS/Docker/反向代理部署、用 Read/Edit 改大文件之前，先查 LIBRARY.md，避免在新项目里重踩别的项目早就踩过的坑；也用于把新踩到的「通用工程坑」按统一格式加进库。触发：/pitfalls、「查坑 / 避坑 / 这类坑查一下」，以及上述高危操作前主动自查。
 ---
 
 # pitfalls：通用工程踩坑库
@@ -18,9 +18,9 @@ description: 跨项目复用的通用工程踩坑库速查。在写 bash/shell �
 
 > **干下面这几类「高危活」之前，先扫一眼 `LIBRARY.md` 对应域。**
 
-> ⚠️ 装好这个 skill 后，请在全局 `~/.claude/CLAUDE.md` 里加一句 always-on 纪律（如「写 bash / 改 git 历史 / macOS 文件/locale 操作 / 配 DNS·Docker·反代 / Read·Edit 改大文件前，先查 pitfalls」）。否则 harness 只在你显式说 `/pitfalls` 时才浮现本 skill，它不会在「正要写 heredoc」这种时刻自动提醒你。这一句全局纪律是让 pull 模型在对的时刻被想起来的关键。
+> ⚠️ 装好这个 skill 后，请在全局 `~/.claude/CLAUDE.md` 里加一句 always-on 纪律（如「写 bash / 改 git 历史 / macOS 文件/locale 操作 / 配 DNS·Docker·反代 / Read·Edit 改大文件前，先查 pitfalls」）。skill 的 `description` 只给 harness 一个**主动想起**本 skill 的机会，对「正要写 heredoc」这种当下时刻并不可靠；这条全局纪律才是让 pull 模型稳定在对的时刻触发的关键（没有它，就只能靠你显式 `/pitfalls`）。
 
-高危域（= 本库覆盖的域，也是 description 里写明、让 harness 在这些活儿出现时把本 skill 浮上来的触发域）：
+高危域（= 本库覆盖的域，也写进 description，给 harness 一个在这些活儿出现时主动浮现本 skill 的机会；但如上所述不可靠，需靠全局纪律兜底）：
 
 | 域 | 典型动作 |
 |---|---|
@@ -56,10 +56,10 @@ description: 跨项目复用的通用工程踩坑库速查。在写 bash/shell �
 
 ```markdown
 ### <一句话把坑说清>
-- **症状**:<不报错但给错结果的现象,或具体报错信息>
-- **根因**:<为什么会这样>
-- **正确做法**:<怎么绕开,给可直接抄的命令/写法>
-- **触发场景**:<什么情况下会撞上>（可选）
+- **症状**：<不报错但给错结果的现象，或具体报错信息>
+- **根因**：<为什么会这样>
+- **正确做法**：<怎么绕开，给可直接抄的命令/写法>
+- **触发场景**：<什么情况下会撞上>（可选）
 ```
 
 写库条的红线：
