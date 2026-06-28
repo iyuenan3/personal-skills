@@ -4,6 +4,17 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-06-28: v0.5 加入 pitfalls + 项目生命周期方法论
+
+### Added
+
+- 新增 `pitfalls/` skill（跨项目复用的通用工程踩坑库）
+  - 解决「记忆项目隔离」导致的痛点：A 项目踩明白的工程坑，B 项目看不见、又踩一遍
+  - 三件套 SKILL（pull 模型 + 触发纪律 + 加坑格式）+ LIBRARY（按域组织的种子坑库）+ README
+  - 种子坑从既有跨项目工程经验抽象 + 脱敏而来（macOS locale/字节陷阱、git 删改混合、heredoc 引号、Cloudflare 新子域证书、阿里云 Docker 加速器、iCloud 同步等）
+  - 定位「三层提纯阶梯」中间层：项目本地坑（stash）→ 通用工程坑（pitfalls）→ 全局铁律
+- 新增根级 `project-lifecycle.md`：把 aireadme / stash / pitfalls / worklog-ingest 串成「以父项目为中枢的项目生命周期工作流」的方法论文档
+
 ## 2026-05-29: v0.4 加入 stash
 
 ### Added

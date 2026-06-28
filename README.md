@@ -9,7 +9,14 @@ Maxwell 的 [Claude Code](https://claude.com/claude-code) skill 合集。
 | [`aireadme/`](aireadme/) | AI-native 跨项目文档体系（12 文件 + 三模式 + lint） | 通用 |
 | [`story-writer/`](story-writer/) | 短篇小说创作 skill（番茄小说平台，7000-10000 字） | 通用 |
 | [`stash/`](stash/) | 对话记忆持久化到项目 memory + 校验（贴合 harness `# Memory` 规范） | 通用 |
+| [`pitfalls/`](pitfalls/) | 跨项目通用工程踩坑库（避免在新项目重踩别的项目踩过的坑） | 通用 |
 | [`worklog-ingest/`](worklog-ingest/) | 个人 worklog 知识库自主 ingest agent | Maxwell 专属（参考性公开） |
+
+## 这些 skill 怎么组合：项目生命周期工作流
+
+它们不是孤立工具。一个人同时跑很多项目时，可以用一个「父项目」当大脑，把 `aireadme` / `stash` / `pitfalls` / `worklog-ingest` 串成一条覆盖项目「从想法到退役」的工作流：父项目负责孵化新项目、每天收集所有项目动态、沉淀跨项目知识，四个 skill 是这条产线上的工位。
+
+完整方法论见 **[`project-lifecycle.md`](project-lifecycle.md)**。
 
 ## 安装
 
@@ -40,6 +47,14 @@ cp -r personal-skills/stash ~/.claude/skills/
 
 显式触发：`/stash` 或「保存记忆 / 沉淀一下 / 记住这个」。详见 [`stash/README.md`](stash/README.md)。
 
+### pitfalls（通用）
+
+```bash
+cp -r personal-skills/pitfalls ~/.claude/skills/
+```
+
+触发：`/pitfalls`、「查坑 / 避坑」，以及写脚本 / 改 git / macOS 文件操作 / 配部署等高危活前主动自查。随库自带一批种子坑，边用边长。详见 [`pitfalls/README.md`](pitfalls/README.md)。
+
 ### worklog-ingest（个人 skill）
 
 ```bash
@@ -58,10 +73,12 @@ personal-skills/
 ├── aireadme/           # AI-native 跨项目文档体系 skill
 ├── story-writer/       # 短篇小说创作 skill（番茄小说平台）
 ├── stash/              # 对话记忆持久化 + 校验 skill
-└── worklog-ingest/     # 个人 worklog ingest agent skill
+├── pitfalls/           # 跨项目通用工程踩坑库 skill
+├── worklog-ingest/     # 个人 worklog ingest agent skill
+└── project-lifecycle.md # 把四个 skill 串成一条工作流的方法论
 ```
 
-各 skill 内部有独立 README + CHANGELOG（如 [`aireadme/CHANGELOG.md`](aireadme/CHANGELOG.md)）。
+各 skill 内部有独立 README（aireadme 另带内部 CHANGELOG，见 [`aireadme/CHANGELOG.md`](aireadme/CHANGELOG.md)）。
 
 ## 历史
 
@@ -69,6 +86,7 @@ personal-skills/
 - **2026-05-28** monorepo 化 + rename 为 `personal-skills`，加入 `worklog-ingest`（老 URL `aireadme-skill` GitHub 永久 redirect）
 - **2026-05-28** 加入 `story-writer`（从已删除的 `iyuenan3/OpenClaw-Customize-Skills` 仓迁入）
 - **2026-05-29** 加入 `stash`（对话记忆持久化 skill，从全局单文件 command 升级为 skill + 两轮 subagent review）
+- **2026-06-28** 加入 `pitfalls`（跨项目通用工程踩坑库 skill）+ `project-lifecycle.md`（把四个 skill 串成项目生命周期工作流的方法论）
 
 ## License
 
