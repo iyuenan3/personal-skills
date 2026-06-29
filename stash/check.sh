@@ -11,7 +11,8 @@ shopt -s nullglob                     # 空目录时 glob 不留字面
 if [ $# -ge 1 ]; then
   DIR="$1"
 else
-  dashed=$(pwd | sed 's:^/::; s:/:-:g')
+  root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)   # 锚项目根，子目录调用不偏移
+  dashed=$(printf '%s' "$root" | sed 's:^/::; s:/:-:g')
   DIR="$HOME/.claude/projects/-$dashed/memory"
 fi
 [ -d "$DIR" ] || { echo "🔴 无 memory 目录：$DIR"; exit 1; }
@@ -39,6 +40,8 @@ for f in "$DIR"/*.md; do
   name=$(printf '%s\n' "$fm" | grep -E '^name:' | head -1 | sed 's/^name:[[:space:]]*//; s/\r$//; s/["'"'"']//g')
   desc=$(printf '%s\n' "$fm" | grep -E '^description:' | head -1 | sed 's/^description:[[:space:]]*//; s/\r$//; s/^["'"'"']//; s/["'"'"']$//')
   mtype=$(printf '%s\n' "$fm" | grep -E '^[[:space:]]+type:' | head -1 | sed 's/.*type:[[:space:]]*//; s/\r$//; s/["'"'"']//g')
+  # 兼容流式 YAML metadata: {type: feedback}（块式上面已取；空了再试流式，否则合法 YAML 被误判缺type 而 🔴 误杀）
+  [ -n "$mtype" ] || mtype=$(printf '%s\n' "$fm" | grep -E '^metadata:[[:space:]]*\{' | head -1 | sed -E 's/.*[,{][[:space:]]*type:[[:space:]]*//; s/[,}].*//; s/\r$//; s/["'"'"']//g')
   toptype=$(printf '%s\n' "$fm" | grep -E '^type:' | head -1 | sed 's/^type:[[:space:]]*//; s/\r$//; s/["'"'"']//g')
 
   errs=""; warns=""
@@ -58,7 +61,8 @@ for f in "$DIR"/*.md; do
   if [ -z "$desc" ]; then errs="$errs 缺description"
   else
     case "$desc" in '>'*|'|'*) warns="$warns description用块标量(应单行inline)" ;; esac
-    dlen=$(printf '%s' "$desc" | wc -m | tr -d ' ')
+    # 码点计数用 python3（locale 无关）；无 python3 回退 wc -m（注意 LC_ALL=C 下 wc -m 按字节、会对中文误报过长）
+    dlen=$(printf '%s' "$desc" | python3 -c 'import sys;print(len(sys.stdin.read()))' 2>/dev/null || printf '%s' "$desc" | wc -m | tr -d ' ')
     [ "$dlen" -gt "$DESC_MAX" ] && warns="$warns description过长(${dlen}字)"
   fi
 
