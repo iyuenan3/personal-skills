@@ -7,7 +7,7 @@
 
 ## memory 是什么
 
-- **位置**：`~/.claude/projects/-<dashed-cwd>/memory/`。`<dashed-cwd>` = 当前项目绝对路径去开头 `/`、其余 `/` 换 `-`（例：`/Users/maxwell/Desktop/Claude-Project/worklog` → `-Users-maxwell-Desktop-Claude-Project-worklog`）。
+- **位置**：`~/.claude/projects/-<dashed-cwd>/memory/`。`<dashed-cwd>` = 当前项目绝对路径去开头 `/`、其余 `/` 换 `-`（例：`/Users/you/projects/my-app` → `-Users-you-projects-my-app`）。
 - **结构**：一事一文件 `<type>_<topic>.md` + 一个 `MEMORY.md` 索引。
 - **唯一消费者** = recall 时读 memory 的 LLM。harness 靠 **description 语义匹配**决定注入哪些 memory。
 - memory **不在任何 Obsidian vault 里** → 正文里的 `[[link]]` 没有工具渲染/跳转，纯粹是给 recall LLM 的关联指针。
@@ -49,7 +49,7 @@ metadata:
 - **互链**：相关 memory 用 `[[name]]`（锚带前缀 kebab name，如 `[[feedback-stash-date-alignment]]`）。多链相关项，断链不慌（recall 辅助，非硬键）。
 - **命名空间区分**（决定 `[[ ]]` 指谁）：
   - `[[feedback-… / project-… / reference-… / user-…]]`（带 type 前缀）→ 指 **memory**，check.sh 校验其存在。
-  - 其它如 `[[maxwell-homepage]]` / `[[车脉科技]]`（无 type 前缀）→ 指 **worklog wiki 页 / 项目名**，跨库引用，校验跳过。
+  - 其它如 `[[some-homepage]]` / `[[some-project]]`（无 type 前缀）→ 指 **你的 wiki 页 / 项目名**，跨库引用，校验跳过。
 
 ## MEMORY.md 索引
 
@@ -85,5 +85,5 @@ metadata:
 
 **两处本地特化**：
 
-1. **`name` 带 type 前缀**（`feedback-` 等）。原因：本机 memory 与 worklog wiki **共享 `[[ ]]` 命名空间**，不带前缀的 `[[name]]` 会和 wiki 页名相撞（如 `[[claude-financial-research]]` 既是 memory 又是 wiki 项目）；type 前缀消歧。harness 的 kebab-case-slug 要求并未禁止 slug 带语义前缀，故合规。
+1. **`name` 带 type 前缀**（`feedback-` 等）。原因：本机 memory 与你的 wiki **共享 `[[ ]]` 命名空间**，不带前缀的 `[[name]]` 会和 wiki 页名相撞（如 `[[some-project]]` 既可能是 memory 又是 wiki 项目）；type 前缀消歧。harness 的 kebab-case-slug 要求并未禁止 slug 带语义前缀，故合规。
 2. **MEMORY.md 索引分隔符用全角冒号 `：`**，不沿用 harness 原格式的破折号分隔符（用户「中文绝不用破折号」红线优先于 harness 格式）。
