@@ -20,6 +20,12 @@
 - **根因**：这是**曾观察到的 harness 行为**（机制不明、非 shell 本身特性、随版本变）。用前自测一条 `false; echo PROBE`，看 PROBE 是否显示，即可判定本会话是否受影响。
 - **正确做法**（防御习惯，在不受影响的 harness 上属低成本冗余，仍推荐）：① 布尔判断用 bash 原生 `[[ $x == *sub* ]]` / `case "$x" in *sub*) ;; esac`，不用 `grep -q`（可读性也更好）；② 想稳妥让某段输出完整，给它接 `| cat` 或结尾 `; true`（使该段 exit 0）；③ 「查残余应为空」可单跑一条 grep，无匹配 exit 1 即读作「0 命中 = 干净」。
 
+### Claude Code Bash 工具注入 `TZ=America/Los_Angeles`，`date` / git 时间戳给的是太平洋时间
+- **症状**：Bash 工具里裸跑 `date` 给太平洋时间，与机器真实系统时区（`/etc/localtime`）不符；靠 `date +%H` 之类算「今天」会把跨时区的次日工作错算成前一天；`git log --date=format-local` 时间戳也变太平洋。
+- **根因**：Claude Code 的 Bash 工具环境注入了 `TZ=America/Los_Angeles`（覆盖系统真实时区，env 变量优先于 `/etc/localtime`）；用户机器本身没问题。
+- **正确做法**：任何算日期 / 读时间戳的操作先显式定住目标时区 `export TZ=<目标时区>`（如 UTC+8 用 `Asia/Shanghai`），别裸信 `date`。用 `export` 指定而非 `unset TZ`（unset 会回退系统 `/etc/localtime`、系统时区被改就又偏；显式 export 才锁死）。env 不跨 Bash 调用持久 → 每个相关调用都要带。判定：`echo "$TZ"` 看注入值、`readlink /etc/localtime` 看系统真值、`TZ=<目标> date` 三方对比。
+- **触发场景**：在 Claude Code Bash 里算「今天 / 昨天」、按日期窗口过滤 git log、给用户产出带时间戳内容（尤其用户 / 工作在非美西时区时）。
+
 ---
 
 ## Bash / Shell
