@@ -1,6 +1,6 @@
 ---
 name: worklog-ingest
-description: worklog 自主 ingest agent。用户睡前说「记录今天 / 记录昨天 / 记录 5 月 X 日 / 补充今天 / 更新日记」+ 附带当天信息时触发,把一天工作素材(本机 git log + yuenan-mbp 工作机桌面所有项目远程扫 + memory + wiki 改动 + 触发消息附带信息)编译成结构化日记 + 更新 wiki + TODO 盘点 + commit + push。全程无人值守、永不阻塞提问: 触发消息即全部输入、没提到的走默认值、用户发完即可去睡。
+description: worklog 自主 ingest agent。用户睡前说「记录今天 / 记录昨天 / 记录 5 月 X 日 / 补充今天 / 更新日记」+ 附带当天信息时触发,把一天工作素材(本机 git log + yuenan-mbp 工作机桌面所有项目远程扫 + IM CLI 拉组长协调工作 + memory + wiki 改动 + 触发消息附带信息)编译成结构化日记 + 更新 wiki + TODO 盘点 + commit + push。全程无人值守、永不阻塞提问: 触发消息即全部输入、没提到的走默认值、用户发完即可去睡。
 ---
 
 # worklog-ingest
@@ -63,10 +63,11 @@ Step E: 终端打印完成清单 / 错误状态(用户晨起读)
 
 | 项 | 默认 |
 |---|---|
-| **日期归属** | 永远 **7:00 为分割线**（00:00-06:59 归前一天，否则当天）；连续跨日工作归主推进日。**从不询问**，有歧义自己拍 + 日记标一句 |
+| **日期归属** | 永远按 **UTC+8（北京 Asia/Shanghai）** 算（不管 Bash 沙箱注入的 TZ；用户即便在别的时区、除非明说都按 UTC+8，2026-07-08 定）；**7:00 为分割线**（00:00-06:59 归前一天，否则当天）；连续跨日工作归主推进日。**从不询问**，有歧义自己拍 + 日记标一句 |
 | **本机各项目** | 始终扫 git log（窗口内 commit）|
 | **Yuan-MBP / cfr** | **默认无工作、不 SSH**（cfr 维护模式收尾中、将归档）；日记记「cfr 今日无工作」。**仅当用户明说「yuan-mbp 有工作」才** SSH §3 抓 |
 | **yuenan-mbp（工作机）** | **默认有工作**；§3.5 跑 `yuenan-scan.sh` 扫**整个桌面所有工作项目**（auto-discover、含新建项目）。仅当用户明说「yuenan-mbp 没工作」才跳过 |
+| **IM 协调层（组长）** | **默认拉**（工作日）；§3.6 经工作机已认证的 IM CLI 补 git 扫不到的组长协调工作。作用域 / 群坐标 / 规则见私有 memory `<im-coordination-memory>`。仅用户明说「今日无 IM 协调」才跳 |
 | **求职动态** | 无新事件，不单列求职段 |
 | **对外动作 / 发布** | 无（除非扫描有明显发布类 commit）|
 | **生活类事务** | 无，生活段写「无」 |
@@ -99,9 +100,10 @@ Step E: 终端打印完成清单 / 错误状态(用户晨起读)
 ~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/feedback_job_scope_record_not_coach.md
 ~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/<remote-project-git-log-memory>.md
 ~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/reference_macos_grep_locale.md
+~/.claude/projects/-Users-maxwell-Desktop-Claude-Project-worklog/memory/<im-coordination-memory>.md
 ```
 
-> 这 8 个是「上来必读全文」的**下限不是上限**。完整 feedback / reference 索引在每会话已注入的 `MEMORY.md` 里，新增的 workflow feedback 自动进 MEMORY.md，按需补读。
+> 这 9 个是「上来必读全文」的**下限不是上限**。完整 feedback / reference 索引在每会话已注入的 `MEMORY.md` 里，新增的 workflow feedback 自动进 MEMORY.md，按需补读。
 
 **② 动态项目 memory**（解决「常新增项目，固定清单必漏」）：
 
@@ -113,10 +115,16 @@ A.1 扫描拿到「本窗口有 commit 的活跃项目」后，对每个活跃 s
 
 ### A.1: 自扫清单（全部默认执行）
 
-**时间窗口公式**：目标归属日 `D` + 扫描窗口 `[D 07:00, D+1 07:00)`，涵盖一整天 + 凌晨延续。**所有自扫脚本统一用 `$D` / `$SINCE` / `$UNTIL` 变量，不出现 `YYYY-MM-DD` 占位字面**。
+**时间窗口公式**：目标归属日 `D` + 扫描窗口 `[D 07:00, D+1 07:00)`，涵盖一整天 + 凌晨延续。**所有自扫脚本统一用 `$D` / `$SINCE` / `$UNTIL` 变量，不出现 `YYYY-MM-DD` 占位字面**。**时间一律 UTC+8（北京），每个算日期的 Bash 调用先 `export TZ=Asia/Shanghai`（见 §0 时区铁律）。**
 
 ```bash
-# ---- 0. 设定 WORKLOG 锚点(不依赖 cwd,Bash 工具长会话 cwd 可能漂移)----
+# ---- 0. 设定 WORKLOG 锚点 + 强制北京时区(不依赖 cwd / 不受 Bash 沙箱 TZ 影响)----
+# ⚠️ 时区铁律(2026-07-08 用户定): 所有日期 / 时间计算一律按 UTC+8(Asia/Shanghai)。
+#   根因: Claude Code Bash 沙箱注入 TZ=America/Los_Angeles(比北京慢 ~15h) → 直接用 date 会把北京次日工作错记成前一天,
+#   且 git log --date=format-local 的时间戳也会跟着变太平洋。工作机 yuenan / IM / git commit 时间戳全是 +08:00。
+#   即便用户人在别的时区, 除非明说, 一律 UTC+8;写日记 / 算归属日前先以此读准当前时间。
+#   注: env 不跨 Bash 调用持久 → 每个用到 date / git-log 时间戳的 Bash 调用都要先带上本行 export(同 WORKLOG / $D 重设纪律)。
+export TZ=Asia/Shanghai
 WORKLOG="$HOME/Desktop/Claude-Project/worklog"
 
 # ---- 0.1 计算目标归属日 D 与扫描窗口（macOS / GNU 兼容）----
@@ -150,11 +158,11 @@ git -C "$WORKLOG" log --date=short --pretty=format:'%h %cd %s' -20
 # SCAN_PROJECTS = canonical 列表, 须与 worklog/CLAUDE.md「需要扫描的项目」段一致;循环末尾 drift lint 自动比对告警。
 # personal-skills = worklog 发布镜像子线: 扫到归 [[worklog]] 章节记, 不单列 ## 章 / 不建 wiki/projects 页。
 # 关键: ① --branches --tags 不含 refs/stash(避免 WIP on main / index on main 伪 commit 当真实工作, Maxwell 高频 stash)
-#       ② 显示用 %cd(commit-date, 与 --since/--until 过滤口径一致;rebase/squash 旧 author-date 不错位, 呼应 §4)
+#       ② 显示用 %cd(commit-date, 与 --since/--until 过滤口径一致;rebase/squash 旧 author-date 不错位, 呼应 judgment §4 跨日归属)
 #       ③ 无 .git 项目(如 banks-data)走 mtime 兜底, 否则零 commit 新项目对扫描完全隐形
 SCAN_PROJECTS="ai-knowledge astock-board banks-data bbq10-keyboard eastern-wisdom maxwell-homepage maxwell-rag-sources \
-  multiplayer-xiaoshuo newapi-proxy jobs-hunt <client-proj-a> petslog \
-  short-story <client-proj-b> xiaohongshu-tool personal-skills worklog"
+  multiplayer-xiaoshuo newapi-proxy jobs-hunt petslog \
+  short-story xiaohongshu-tool personal-skills worklog <client-proj-a> <client-proj-b>"
 for p in $SCAN_PROJECTS; do
   d="$HOME/Desktop/Claude-Project/$p"
   [ -d "$d" ] || continue
@@ -265,9 +273,9 @@ fi
 #   --branches='*yuenan*' glob 抓所有名字含 yuenan 的分支(只我的分支、排除同事/基线/dev、跨多分支单次 walk 去重) + 越南/yuenan 署名过滤(团队共享仓必须过滤排除同事) + AIREADME/CHANGELOG 头部。LC_ALL=C 防漏 CJK 署名。
 # 默认有工作 = 始终跑; 仅当触发消息明说「yuenan-mbp 没工作」, agent 把 YUENAN_SKIP=1 才跳过。
 # 哨兵 YUENAN_REACHABLE 剥「可达 0 改动 vs 不可达」; 脚本尾 YUENAN_SCAN_WORKSPACES=N 确认真跑到 + 发现 N 个工作区; YUENAN_SCAN_MISSING = 可达但脚本没部署/坏。
-# ⚠️ 2026-06-08 起雇主项目私仓内与其他项目同等详记（日记 + caryscloud.md/对应项目页）；保留：① 项目页 RAG 排除(挡公开主页) ② 团队成员真名抽象
-#    ③ 公开镜像同步时按既定脱敏策略处理。
+# ⚠️ 2026-06-08 起雇主项目私仓内与其他项目同等详记（日记 + caryscloud.md/对应项目页）；对外可见面（公开主页 / 公开镜像）按既定隐私策略另行收敛处理。
 # 脚本本体只活在 yuenan-mbp（含雇主目录/仓名/分支模式/署名），不进 worklog 仓、不进公开镜像（同 daily-digest.sh 先例）；改扫描逻辑改远端脚本、新项目零改 skill（auto-discover）。
+# wiki 路由：CarysCloud 系归 [[caryscloud]] 项目页分子线记；新发现的非 CarysCloud 项目按内容判断归属（caryscloud 子线 vs 新建项目页），拿不准 Step E 标一句让用户晨起定，默认按工作机私有处理（见 memory reference_personal_skills_monorepo）。
 YUENAN_SKIP=""   # 仅当用户明说 yuenan-mbp 没工作时由 agent 置 1（默认空 = 始终扫）
 if [ -z "$YUENAN_SKIP" ]; then
   yc=$(ssh -o ConnectTimeout=8 yuenan-mbp "echo YUENAN_REACHABLE; \
@@ -279,6 +287,19 @@ if [ -z "$YUENAN_SKIP" ]; then
   esac
 else
   echo "=== yuenan-mbp 用户明说今日无工作 → 跳过扫描、日记记无 ==="
+fi
+
+# ---- 3.6 IM 协调层（组长协调工作 = git 扫不到的那层，2026-07-07 起）----
+# 背景: 用户任项目组组长后，大量工作是 IM 上的协调/汇报/对齐/开会，git-scan 天然扫不到（yuenan-scan 只见 commit）。
+# 通路: 经 yuenan-mbp 上已认证的 IM CLI 拉当天协调消息 / 本人 owner 的文档 / 会议纪要。**作用域 / 群坐标 / 成员归属映射 / 认证细节全在私有 memory `<im-coordination-memory>`（A.0 起必读）**，本 skill 不写死雇主坐标（同 §3.5「脚本只活远端」纪律）。
+# 默认拉（工作日）；仅当触发消息明说「今日无 IM 协调」才由 agent 置 IM_SKIP=1。窗口同 [SINCE, UNTIL] 7 点边界（IM 时间戳可靠，不像 git 时钟）。
+# 坑: token 会过期 → 遇 401 时 **agent 不阻塞**（同 §3.5 SSH 不可达的兜底）: 跳过 IM 层、日记引言块标一句「IM token 过期、协调层待重新认证 + D+1 补抓」、Step E 报「需在工作机 GUI 终端重新认证」。
+# 产出: 拉到的协调内容编译进日记「IM 协调」段（结构见输出契约「IM 协调段模板」）；原始消息不进仓，只落编译后的摘要。
+IM_SKIP=""   # 仅当用户明说今日无 IM 协调时由 agent 置 1（默认空 = 拉）
+if [ -z "$IM_SKIP" ]; then
+  echo "=== IM 协调层: 默认拉（作用域见私有 memory）；agent 按 memory 规则执行 IM CLI 查询 ==="
+else
+  echo "=== IM 协调层: 用户明说今日无 IM 协调 → 跳过、日记记无 ==="
 fi
 
 # ---- 4. 今日改动 worklog memory + wiki / diaries（按归属窗口 [SINCE, UNTIL]，与 §2 口径一致）----
@@ -293,12 +314,14 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 ### 扫描扩展
 
-- **跨日延续**：凌晨提交 (00:00-06:59) 归前一天，扫描窗口要覆盖。
-- **本机扫不到的盲区**： Yuan-MBP cfr（**默认无、维护收尾**，仅用户提才抓）+ yuenan-mbp 工作机（**默认有**，yuenan-scan.sh 自动发现桌面所有工作项目扫，私仓详记）+ 其他全靠触发消息附带信息。
-- **yuenan-mbp scan = 输入**： §3.5 调远端 `yuenan-scan.sh $D` 返回的各工作项目段（有 digest 的工作区跑 digest 4 信号 / 其余跑 yuenan 分支 git-log + CHANGELOG）作当天理解输入；**2026-06-08 起与其他项目同等详记（私仓）**，保留对应项目页 RAG 排除 + 团队成员真名抽象 + 公开镜像脱敏。
-- **yuenan-mbp 桌面 auto-discover（2026-06-27 起根治）**： yuenan-mbp = 工作机，桌面工作项目会持续增多（现 3 个 CarysCloud 工作区，每个含多 git 子仓；未来会建新项目）。**不再每新增一个工作区粘一块 §3.5x**（6/12 AllinOne、6/27 DAG 两次首日漏扫的教训）：远端 `yuenan-scan.sh` glob `~/Desktop/*` 自动发现所有工作项目 + 按口径分流（digest / yuenan 分支 git-log）+ `*/.git` glob 自动发现子仓，**新项目 / 新仓零改 skill 自动纳入**；非工作区目录（如 feishu 文档缓存）自动跳过。CarysCloud 系归 [[caryscloud]] 项目页分子线记；新发现的非 CarysCloud 项目按内容判断归属（caryscloud 子线 vs 新建项目页），拿不准 Step E 标一句让用户晨起定，默认按工作机私有处理。**脚本本体只活在 yuenan-mbp**（雇主目录 / 仓名 / 分支模式 / 署名都在远端），故 SKILL.md 内无逐项目雇主坐标，公开镜像 personal-skills 只需脱敏 §3.5 一块的主机名 + 脚本名。
-- **SSH 不可达**： Yuan-MBP / yuenan-mbp 合盖休眠等情况，日记引言块标 ⚠️「<机器> SSH 不可达，远程工作待 X+1 补抓」（参考 5/26 / 6/4 日记）。不阻塞，Step E 不报错。
-- **AIREADME 漂移雷达（§2.5）**： 对今日活跃 + 本地有 `AIREADME/` 的项目，复用 `aireadme/check.sh --drift` 算 AIREADME 落后 HEAD 多少 commit，漂移项转述进 Step E 报告。**只暴露不自动改**（`/aireadme update` 有确认门）。解决 AIREADME「init 做到位、update 没人记得跑」导致的无声漂移。远程项目（cfr / CarysCloud）无本地 AIREADME，不在范围。**内容新鲜度门（2026-06-27 加）**： 报「落后」前先查该项目 `AIREADME/` 今日窗口内有无 commit，有则抑制（= 自有 session 项目如 [[petslog]] / [[<client-proj-a>]] 自己在维护 AIREADME、worklog 侧锚点不 bump 致恒报「落后」是噪音；建议的 `/aireadme update` 也是项目 session 职责、非 ingest 操作者能跑）。用真实新鲜度替代按所有权手维护 skip 名单，自动覆盖未来项目，且不误伤 worklog 自身（今日 AIREADME 没 commit → 照常报）。
+本层各数据源的扫描细节均在上方代码注释内联，不在此复述（避免双写漂移：同一约定散在两处、一改就要同改两处的教训）。只留「哪个关注点在哪」的导航 + 本层独有的行为约定：
+
+- 跨日窗口边界 → §0.1 `UNTIL` 注释；本机 git / 无 git mtime 兜底 → §2；漏记缺口检测 → §2.1。
+- cfr 默认不 SSH（维护收尾，仅用户明说才抓）→ §3 + memory `<remote-project-git-log-memory>`。
+- yuenan-mbp auto-discover + 私仓详记 + CarysCloud wiki 路由 → §3.5（wiki 路由规则已并入该块注释）。
+- IM 协调作用域 / 成员归属映射 / token 兜底 → §3.6 + 私有 memory `<im-coordination-memory>`。
+- **SSH 不可达（本层独有行为）**：Yuan-MBP / yuenan-mbp 合盖 / 休眠 → 日记引言块标 ⚠️「<机器> 待 X+1 补抓」，不阻塞、Step E 不报错（参考 5/26 / 6/4 日记）。
+- AIREADME 漂移雷达 → §2.5（drift 算法 + 内容新鲜度门）+ Step E（转述、只暴露不自动改）。
 
 ---
 
@@ -310,7 +333,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 触发消息形如「记录今天 + <附带信息>」，附带信息自由格式（「有什么工作 / 哪台机器没工作 / 发生什么事」）。逐句识别对应项：
 
-- **机器工作状态**：「yuan-mbp 有工作」→ agent 置 `CFR_SCAN=1`（默认空 = 不抓）；「yuenan-mbp 没工作」→ 置 `YUENAN_SKIP=1`（默认空 = 扫）；没提 = 按默认（cfr 不抓 / yuenan 扫）。
+- **机器工作状态**：「yuan-mbp 有工作」→ agent 置 `CFR_SCAN=1`（默认空 = 不抓）；「yuenan-mbp 没工作」→ 置 `YUENAN_SKIP=1`（默认空 = 扫）；「今日无 IM 协调」→ 置 `IM_SKIP=1`（默认空 = 拉）；没提 = 按默认（cfr 不抓 / yuenan 扫 / IM 拉）。
 - **当天主线 / 项目提示**：「今天主要在 X 项目 / 新建了 Y」→ 作主线识别 + 归属判断输入（auto-discover 已兜底发现，用户点一句更准）。
 - **求职 / 对外 / 生活 / 特殊强调**：用户提到的归对应段；没提到的按默认（无）。
 - **日期 / 模式**：「记录昨天 / 5 月 X 日」→ 对应归属日；「补充 / 更新」→ 对应模式。日期边界永远 7:00、从不问。
@@ -320,7 +343,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 - **客观数据以扫描为准、用户独有信息以触发消息为准**：扫描扫到的项目工作照常记（不依赖用户提）；用户独有、扫不到的信息（求职 / 生活 / 对外 / 强调）只认触发消息说的。
 - **用户明说的覆盖默认**（「petslog 今天发版」→ 对外段记；「yuan-mbp 有工作」→ 反转抓 cfr）。
 - **用户没提到的项一律走默认值表**，不脑补、不追问；日记对应段写「无」/「均无」。
-- **纯「记录今天」无任何附带信息** → 全部走默认（cfr 无 / yuenan 扫 / 求职·对外·生活无），照跑，Step E 标一句「未附带信息、按默认跑、请核对」。
+- **纯「记录今天」无任何附带信息** → 全部走默认（cfr 无 / yuenan 扫 / IM 拉 / 求职·对外·生活无），照跑，Step E 标一句「未附带信息、按默认跑、请核对」。
 - **重要沟通 / 跨 session 同步**：不主动找，但用户在触发消息里提到的必接（归对应段）。
 - **遇到任何歧义**：用规则 / 默认自己拍 + 日记标 ⚠️，**绝不停下提问**。
 - **§2.1 报缺口**（前几天有 commit 无日记）：默认不补、不追问，Step E 被动标一句供晨起参考（[[feedback-stash-date-alignment]] 不照抄、按真实日期对齐）。
@@ -334,7 +357,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 **新增模式**（默认）：
 ```
 收到、开跑。解析到: <从触发消息解析到的几条, 如 yuenan-mbp 主线 X / yuan-mbp 无工作>;
-默认: cfr 无工作 / 求职·对外·生活无(你没提)。扫到: 本机 X commits + yuenan-mbp N。
+默认: cfr 无工作 / IM 协调默认拉 / 求职·对外·生活无(你没提)。扫到: 本机 X commits + yuenan-mbp N。
 跑完终端打印完成清单 + 已 commit + 已 push; 有错日记标 ⚠️ + .ingest-status.md 写卡点。
 ```
 
@@ -361,7 +384,7 @@ cat "$HOME/Desktop/Claude-Project/worklog/wiki/todos.md"
 
 **执行顺序**： **D.3 TODO 盘点 → D.1 写日记 → D.2 更 wiki → D.4 commit + push**。
 
-> **硬约束（贯穿 Step D）**：所有 git / 文件操作走 `WORKLOG="$HOME/Desktop/Claude-Project/worklog"` 绝对锚点（`git -C "$WORKLOG"` / `"$WORKLOG/..."`），**不依赖 cwd、不用裸 `cd`**。长会话 Bash 工具 cwd 会漂移（stash 时漂到子目录致路径推导出错是真实案例），shell 变量也不跨 Bash 调用持久，每个新 Bash 调用若用到 `$WORKLOG` / `$D` 先重设。
+> **硬约束（贯穿 Step D）**：所有 git / 文件操作走 `WORKLOG="$HOME/Desktop/Claude-Project/worklog"` 绝对锚点（`git -C "$WORKLOG"` / `"$WORKLOG/..."`），**不依赖 cwd、不用裸 `cd`**。长会话 Bash 工具 cwd 会漂移（stash 时漂到子目录致路径推导出错是真实案例），shell 变量也不跨 Bash 调用持久，每个新 Bash 调用若用到 `$WORKLOG` / `$D` 先重设；用到 date / 时间戳的先 `export TZ=Asia/Shanghai`（时区铁律，见 Step A §0）。
 
 - **D.3 先做**：盘点结果（完成 N / 失效 M / 顺延 K + 关键变化一句）进 D.1 的「事务·TODO 盘点」段。
 - **todos.md 主存储由 D.3 全权拥有**： D.2 不重复操作 todos.md（避免与 D.3 双重操作不一致）。
@@ -484,6 +507,7 @@ Wiki 更新: index / log / todos / projects/{slugs}
 TODO 盘点: ✅ 完成 N / 失效 M / 顺延 K
 Commit: <hash1> 内容微调 / <hash2> ingest 产出
 Push: ✅ pushed to origin/main
+IM 协调: 拉到 N 群 + M 场会纪要（或「跳过(用户明说今日无 IM 协调)」｜「⚠️ token 过期、协调层待重新认证 + D+1 补抓」）
 AIREADME 漂移: ⚠️ newapi-proxy 落后 17 / petslog 落后 28（今日动过但 AIREADME 未跟上 → 考虑 /aireadme update）｜ 无则「均同步」
 
 主线: ...(一句话回顾)
@@ -615,6 +639,7 @@ commit message 是「做了什么」的简写。日记要补「为什么这么�
 5. 概览
 6. 今日时间线
 7. 项目章节 (每项目一段)
+7.5 IM 协调 (组长协调工作，有则写；来源 §3.6 IM CLI。结构见下「IM 协调段模板」)
 8. 求职 (可选: 有具体事件才写;材料打磨在项目章节带一句即可)
 9. 事务 (必含)
 10. 生活 (必含)
@@ -671,7 +696,7 @@ git_commits: 14          # 数字,跨项目 commit 总数
 ```markdown
 ## 今日时间线
 
-> 时间为本地时间(CST, UTC+8)。00:00-06:59 按边界归前一天。
+> 时间为北京时间(CST, UTC+8, 强制不随 Bash 沙箱 TZ)。00:00-06:59 按边界归前一天。
 
 | 时间 | 项目 | 操作 |
 |:--:|------|------|
@@ -707,6 +732,38 @@ git_commits: 14          # 数字,跨项目 commit 总数
 
 - TODO 项(或顺延理由)
 ```
+
+### IM 协调段模板（组长协调工作；来源 §3.6 IM CLI）
+
+> **有组长协调工作才写**（任组长后几乎每个工作日都有）。这是 git 扫不到的一层，5 个子层按需取用（当天没有的层略过、不硬凑）。
+
+```markdown
+## IM 协调
+
+> 来源：IM。主战场 = 项目主群 + 专项群（本人为项目组组长）；其他群只记与本人相关的交互。7 点边界。
+
+### 组长节奏：早集合 + 计划、晚汇总
+（本人当天的协调轨迹：几点集合团队/派活、几点发全组计划、几点催报、几点发进展汇总，带 IM 时间戳）
+
+### 全组 N 条工作线（据主群 HH:MM 计划 + HH:MM 汇总）
+（据当天项目主群的「今日工作计划」+「今日工作进展汇总」，发布人照实标〔本人 / 当值组员 / PMO 均可能〕，只有计划或只有汇总的如实标。全组视角、逐线列交付。多子项的线拆子弹、别挤成一行长墙）
+
+### 组内分工（各人进展，据组内小群）
+（据组员在组内小群各自上报，把工作线归到具体人。⚠️ **按实际模块归属，别照抄发言人自己的分类**：有人会把跨模块的活写在自己主模块标题下）
+
+### 跨群协调
+（其他专项群里与本人相关的触点：本人负责什么、和谁对齐。非本人负责的独立项目只记触点）
+
+### 会议纪要（IM 智能纪要）
+（当天 owner=本人或本人参加的会：读「智能纪要」的**关键决策**段，逐会一小节列决策要点，不搬逐字稿）
+```
+
+**IM 协调段的四条纪律（2026-07-07 multi-agent review 沉淀）**：
+
+1. **组内分工按实际模块归属**，不照抄发言人的自我分类（review 实例：有组员把跨模块的回验写在自己主模块标题下，得按实际拆）。
+2. **计划 vs 汇总会有 gap**（正午计划里的活可能没进晚间汇总），**两头都扫**、别只信汇总（review 实例：一条重构线只出现在计划里、只看汇总就漏了）。
+3. **全组工作线（做了什么）与组内分工（谁做的）双轴保留**，重叠自然不强并；仅明显逐字重复处一段改「同上」。
+4. **今日时间线用 IM 时间戳重建**：IM 事件戳可靠，git 时钟不可靠（本机 merge 等 git 事件保留但标注「机器时钟不可靠」）。
 
 ### 事务段（实证格式，基于 5/14-5/27 历史日记归纳）
 
@@ -838,7 +895,7 @@ perl -i -pe '
 - **不做不可逆操作**：不删 / 不移 / 不 rebase / 不 force-push;commit + push 是可逆的（revert / force-push 改），其他卡住等用户醒来
 - **跨项目同步消息不主动接**：用户从其他 session 转过来的同步消息（像 maxwell-homepage 的 P0 修复反馈）是即时处理，不主动找；但用户在触发消息里提到的必接（归对应段）
 - **求职细节不追问**： Maxwell 给求职数据 / 口径是让我落档，不是做谈薪 / 面试教练；不追问面试言行，不推行动清单，风险提醒一句点到为止(见 memory `feedback_job_scope_record_not_coach`)
-- **客户 / 私有项目敏感数据不进 worklog**： 扫到的客户项目（如 `<client-proj-b>`）git log 摘要写进 diary / `wiki/projects/` 时，**报价 / 真实姓名 / 未成年人数据等敏感细节留在项目本地 PRD，不进 worklog**（`wiki/projects/` 可能被 maxwell-homepage build 读 = 半公开）。该项目约束由 A.0 ② 动态载入，按其红线办
+- **客户 / 私有项目敏感数据不进 worklog**： 扫到的客户项目（如 `<client-proj-b>`）git log 摘要写进 diary / `wiki/projects/` 时，**报价 / 真实姓名等敏感细节留在项目本地 PRD，不进 worklog**（`wiki/projects/` 可能被 maxwell-homepage build 读 = 半公开）。该项目约束由 A.0 ② 动态载入，按其红线办
 
 ---
 
@@ -847,9 +904,9 @@ perl -i -pe '
 - **契约层**： `worklog/AIREADME/ARCHITECTURE.md` 6 步契约定义（本 skill 是实现）
 - **日记 schema**： `worklog/AIREADME/CONVENTIONS.md` 日记格式契约
 - **触发语接口**： `worklog/AIREADME/SPEC.md`
-- **关联 memory**（完整 superset。**Step A.0 ① 的 8 个 memory 是 essential subset 必读**，**② 活跃项目的 `project_*.md` 走 MEMORY.md 索引动态读**；此处其余几个为「触发联想」遇坑再查）：
+- **关联 memory**（完整 superset。**Step A.0 ① 的 9 个 memory 是 essential subset 必读**，**② 活跃项目的 `project_*.md` 走 MEMORY.md 索引动态读**；此处其余几个为「触发联想」遇坑再查）：
 
-  Step A.0 必读 8 个（essential subset）：
+  Step A.0 必读 9 个（essential subset）：
   - 日期对齐 → `feedback_stash_date_alignment`
   - 远程归属默认 Maxwell → `feedback_yuan_mbp_remote_collab`
   - 时间戳 + 工作时段 → `feedback_diary_timestamps`
@@ -858,6 +915,7 @@ perl -i -pe '
   - 求职只记不导 → `feedback_job_scope_record_not_coach`
   - cfr SSH 路径 → `<remote-project-git-log-memory>`
   - macOS grep locale → `reference_macos_grep_locale`
+  - IM 协调作用域 / 坐标 / 认证 → `<im-coordination-memory>`
 
   其余触发联想（遇坑再查）：
   - 不用破折号 → 全局 `~/.claude/CLAUDE.md`「中文写作规范」

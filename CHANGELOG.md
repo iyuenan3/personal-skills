@@ -4,6 +4,21 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-07-09: v0.6 worklog-ingest 同步到最新（方法论骨架定位）
+
+worklog-ingest 公开镜像定位明确：**「个人工作日志 ingest 方法论骨架」**，不追求与私有工作副本逐字复刻。通用改进全量 port；雇主专属扩展（IM 协调层的具体坐标）收敛为泛化骨架，永不进公开仓。
+
+### Added
+
+- **worklog-ingest · IM 协调层（§3.6）**：任组长后 git 扫不到的协调 / 汇报 / 开会工作层。默认拉 + 触发消息可跳 + token 过期不阻塞兜底；输出契约新增「IM 协调段模板」（组长节奏 / 全组工作线 / 组内分工 / 跨群协调 / 会议纪要五子层）+ 四条纪律。群坐标 / 作用域 defer 到私有 memory，公开版只保留泛化骨架（不列群名 / 人名 / 命令细节）。
+- **worklog-ingest · 时区铁律（§0）**：Claude Code Bash 沙箱注入 `TZ=America/Los_Angeles` 会把日期算错；所有算日期的 Bash 调用先 `export TZ=Asia/Shanghai`（env 不跨调用持久）。默认值表 / Step D 硬约束 / 时间线模板同步 UTC+8 口径。
+- **pitfalls**：2026-07-08 已先行同步 Bash 沙箱 TZ 注入坑条（`771c31a`），与本条同源。
+
+### Changed
+
+- **worklog-ingest · 扫描扩展去重**：6 个与代码注释约 80% 重复的胖段压成导航索引（防双写漂移）。
+- **worklog-ingest · 一致性修正**：multi-agent review 9 缺陷修复的可 port 部分（judgment §4 消歧、Step C 回执补 IM 层、A.0 memory 机制扩至 9 项等）；README 素材来源 / 参考价值 / hardcode 清单同步。
+
 ## 2026-06-28: v0.5.1 第二轮 review 修正
 
 第二轮逐条坑本机对抗式复现 + 修复验证 + 采用者/作品集视角，修掉一批准确性与可用性问题。
