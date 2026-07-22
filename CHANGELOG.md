@@ -4,6 +4,17 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-07-22: v0.7 stash 记状态（时效与变更）+ 整体 review 修复
+
+### Added
+
+- **stash ·「记状态：时效与变更」节（MEMORY_SPEC）**：记忆过时是记忆系统的最大留白，状态型记忆过期后 recall 持续喂旧值。新增写时纪律：状态型 vs 耐久型两把判定尺 / as-of 戳必进 description / 变更 ≠ 纠错（supersession 保历史）/ 实体消失立墓碑（含复活回退）/ 不记高频轮换状态 / 可选 `metadata.asOf` 机读钩子 / 存量回补 as-of 取证规则。
+- **stash · SKILL 写时接线**：Step 2 加法 + 减法双扫（含全文撞库命令）；Step 3 查重升级为三种关系（重复 / 演进 / 无覆盖）+ 冲突保守并存（无人值守任何分支不问用户）；Step 5 三向 description 处理路由（写错 / 状态变更 / 实体消失方向各异）；红线第 8 条。
+
+### Fixed
+
+- **stash · 8 视角对抗 review 修复 15 项**（39 条发现证伪剩 31、去重 15）：memory 目录推导对齐 harness 真实 keyspace 命名（非字母数字全换 `-`，原推导对含 `.`/`_` 的路径会写进死目录）；check.sh 索引孤儿行校验补连字符形文件名（fixture 复现修复）；红线 2 路径机制注对齐 git-toplevel 锚定；Step 5 去模板化防复述漂移；混含条措辞消歧；示例全部占位化；标点全角统一。
+
 ## 2026-07-09: v0.6 worklog-ingest 同步到最新（方法论骨架定位）
 
 worklog-ingest 公开镜像定位明确：**「个人工作日志 ingest 方法论骨架」**，不追求与私有工作副本逐字复刻。通用改进全量 port；雇主专属扩展（IM 协调层的具体坐标）收敛为泛化骨架，永不进公开仓。

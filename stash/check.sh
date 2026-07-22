@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # stash memory lint: 校验 memory 目录是否合 MEMORY_SPEC.md
 # 用法：bash ~/.claude/skills/stash/check.sh [MEMORY_DIR]
-#   无参数时从 pwd 推导：~/.claude/projects/-<dashed-cwd>/memory
+#   无参数时从项目根（git toplevel，回退 pwd）推导：~/.claude/projects/-<dashed-cwd>/memory
 # 退出码：🔴 有 must-fix → exit 1；🟡 advisory 不影响退出码。
 set -uo pipefail
 export LC_ALL="${LC_ALL:-C.UTF-8}"   # 中文匹配需 UTF-8 locale，否则静默失效
@@ -12,7 +12,7 @@ if [ $# -ge 1 ]; then
   DIR="$1"
 else
   root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)   # 锚项目根，子目录调用不偏移
-  dashed=$(printf '%s' "$root" | sed 's:^/::; s:/:-:g')
+  dashed=$(printf '%s' "$root" | sed 's:^/::; s:[^a-zA-Z0-9]:-:g')   # 非字母数字全换 -（与 harness keyspace 命名一致，不只 /）
   DIR="$HOME/.claude/projects/-$dashed/memory"
 fi
 [ -d "$DIR" ] || { echo "🔴 无 memory 目录：$DIR"; exit 1; }
@@ -102,7 +102,7 @@ done
 
 # 反向索引校验：MEMORY.md 里指向不存在文件的孤儿行（改名 / 删除后漏清 → recall 加载悬空指针，红线5「一一对应」的反向半边）
 if [ -n "$index" ]; then
-  for link in $(printf '%s' "$index" | grep -oE '\([a-z0-9_]+\.md\)' | tr -d '()' | sed 's/\.md$//'); do
+  for link in $(printf '%s' "$index" | grep -oE '\([A-Za-z0-9_.-]+\.md\)' | tr -d '()' | sed 's/\.md$//'); do
     [ "$link" = "MEMORY" ] && continue
     printf '%s' "$stems" | grep -qFw "$link" || { echo "🟡 MEMORY.md 索引孤儿行 → $link.md（文件不存在，改名 / 删除后漏清）"; warn=1; }
   done

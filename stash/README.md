@@ -13,7 +13,7 @@ Claude Code 有 per-project 文件记忆（`~/.claude/projects/-<dashed-cwd>/mem
 | 文件 | 作用 |
 |---|---|
 | [`SKILL.md`](SKILL.md) | 主流程 7 步（定位 → 盘点 → 查重 → 判断 → 写盘 → 校验 → 更新 CLAUDE.md（按需）+ 报告） |
-| [`MEMORY_SPEC.md`](MEMORY_SPEC.md) | 记忆规范**单一真相源**（frontmatter schema / 四类 type / 命名 / 互链 / 判断标准），SKILL 和 check.sh 都引用它、不复述 |
+| [`MEMORY_SPEC.md`](MEMORY_SPEC.md) | 记忆规范**单一真相源**（frontmatter schema / 四类 type / 命名 / 互链 / 判断标准 / 记坑：诚实捕获 / 记状态：时效与变更），SKILL 和 check.sh 都引用它、不复述 |
 | [`check.sh`](check.sh) | 校验脚本（🔴 block / 🟡 warn），可手动跑、可被 skill 调 |
 
 ## 安装
@@ -34,6 +34,15 @@ mkdir -p ~/.claude/skills && cp -r personal-skills/stash ~/.claude/skills/
 ```bash
 bash ~/.claude/skills/stash/check.sh [MEMORY_DIR]   # 无参数从 pwd 推导
 ```
+
+## 记状态：时效与变更（2026-07 新增）
+
+memory 最大的坑不是记错，是**过期**：角色变了 / 实体删了，旧记忆没人回头改，recall 每次先喂过期值。对策（详见 `MEMORY_SPEC.md`「记状态」节）：
+
+- **状态型 vs 耐久型**两把判定尺；状态型必带 as-of 戳，且**戳进 description**（recall 唯一钩子，只改正文 = 没修）。
+- **变更 ≠ 纠错**：旧值当时对、现实变了 → supersession（旧值降为正文带日期历史行）；别写成「修正」，会抹掉真实历史。
+- **实体消失立墓碑**：description 前置死标、条目不删；复活 / 回退更新墓碑本身，不建平行条。
+- **写时双扫**：加法（值得记什么）+ 减法（本次对话作废了什么）；删除 / 退役类事件天生不触发「记一下」，是过时记忆高发源。
 
 ## 通用性说明
 
