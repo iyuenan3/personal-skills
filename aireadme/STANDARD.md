@@ -1,4 +1,4 @@
-# AIREADME 标准 v0.2
+# AIREADME 标准 v0.4
 
 > 每个项目根 `AIREADME/` = 该项目的 **AI 真相源**。本文件是逐文件编写规范，`aireadme` skill 执行时读它。
 > 双用途：**跨项目了解**（别人读你）+ **防偏差**（你读自己）。
@@ -33,7 +33,10 @@
 | 什么版本变了什么 | CHANGELOG | DECISIONS（CHANGELOG 链过去拿理由）|
 | 可执行 TODO 颗粒 | 项目 TODO 系统 | ROADMAP（只放方向）|
 | infra 项目"为什么存在" | CORE | PRD（产品类才写）|
+| 产品赌注/关键假设/pre-mortem 风险（前瞻）| PRD | DECISIONS（某决策落地时其约束才进 Constraint）/ MEMORY（风险真发生才进）|
 | key/secret 本身 | **哪都不写** | — |
+
+> pm 产物分流消歧：`pre-mortem` / `identify-assumptions-new` 的输出按性质拆两处，**致命约束/红线 → CORE「绝不」**，**一般假设/风险 → PRD**（同一 pm 产物按性质各归一格，不算「一条信息进多文件」）。
 
 ## 旧文档迁入（按内容拆，不按文件名）
 
@@ -75,6 +78,7 @@
 ### CORE `身份&契约/跨`：来访首读 + 防偏差总纲
 必填：身份 / 使命 / Non-Goals（做·不做）/ **绝不（硬约束红线）** / 生命周期。
 不写：产品细节→PRD、架构→ARCHITECTURE、接口→SPEC。触发：定位/边界/红线变。
+**从 pm 产物蒸馏**（若立项工作流跑过 pm-skills）：身份·使命 ← `product-vision` + `value-proposition`（压成 1 句定位 + 1 句「给谁解决什么」）；Non-Goals ← `lean-canvas` 的 out-of-scope + 战略取舍（列 3-5 条「明确不做」）；绝不 ← `identify-assumptions-new` 的致命约束 / `pre-mortem` 的红线（只留结论，不留推演）。**结论体：CORE 存拍板结果，不存怎么想出来的。** 原始长稿蒸馏后即弃，不落 docs、不加文件（pm 产物只进 CORE + PRD 两个已有槽位）。
 
 ### RELATIONS `身份&契约/跨`
 必填：① 出向依赖（谁·用途·`../<proj>/AIREADME/`）② 入向（谁用我）③ 共享底座。
@@ -93,7 +97,8 @@
 不写：key→哪都不写。（共享底座属本项目→配置写这；消费别人的→RELATIONS 指属主、不复制其配置。）触发：部署/环境变。
 
 ### PRD `规划&记忆/内`（产品类）
-必填：目标 / 用户问题 / 成功指标 / UX 哲学。infra / docs·meta 类 = N/A 占位指向 CORE。触发：产品方向变。
+必填：目标 / 用户问题 / 成功指标 / UX 哲学（+ 关键假设/风险：产品类且跑过 pm 工作流时条件必填，见下蒸馏段）。infra / docs·meta 类 = N/A 占位指向 CORE。触发：产品方向变。
+**从 pm 产物蒸馏**（立项工作流的落点；原始长稿蒸馏后即弃、不留 docs）：目标 ← `create-prd` 的 Objective + Key Results；用户问题 ← Market Segment + Value Proposition（谁·什么 job·现在怎么凑合）；成功指标 ← Key Results 的 SMART 指标；**关键假设/风险各 1 行 ← `identify-assumptions-new` + `pre-mortem`**（弃原稿后赌注唯一的存续处，一行足够）。PRD 是内读文件、可比 CORE 详，但仍按高信号密度拣结论，不搬 8 段长文。
 
 ### ROADMAP `规划&记忆/内`
 必填：**Now** / Next / Later / 搁置(+原因)。不写：可执行 TODO 颗粒。触发：优先级变。
@@ -176,4 +181,4 @@
 > 理由：节点抽象有维护成本，小底座不值得单独成套文档。例：一个被 ≥2 项目共享的 Caddy 配置，即便放在 `proj-a/edge/` 子目录，也只写进 `proj-a` 根 AIREADME。
 
 ---
-v0.2，版本史见 CHANGELOG.md。
+v0.4，版本史见 CHANGELOG.md。

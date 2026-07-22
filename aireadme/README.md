@@ -66,10 +66,11 @@ init 后的项目结构：
 ## Lint
 
 ```bash
-bash ~/.claude/skills/aireadme/check.sh [AIREADME_DIR]   # 默认 ./AIREADME
+bash ~/.claude/skills/aireadme/check.sh [AIREADME_DIR]            # 结构 lint，在项目根跑，默认 ./AIREADME
+bash ~/.claude/skills/aireadme/check.sh --drift [AIREADME_DIR]    # 漂移检查，需在项目 git 仓内跑
 ```
 
-退出码：🔴 = exit 1（必修）/ 🟡 = advisory（exit 0）。脚本会校验 12 文件齐全、INDEX 状态表 + 同步锚点、未填占位、明文密钥泄漏、边界粗查。脚本自设 `LC_ALL=C`（字节模式，不依赖 UTF-8 locale；macOS 无 C.UTF-8，详见 CHANGELOG v0.2）。
+退出码：🔴 = exit 1（必修）/ 🟡 = advisory（exit 0）。结构 lint 校验 12 文件齐全、INDEX 状态表 + 同步锚点、未填占位、明文密钥泄漏、边界粗查；`--drift` 读同步锚点 SHA 算 AIREADME 落后项目 HEAD 多少 commit、并粗判 delta 是否触及结构 / 部署文件（本系统的核心防腐能力）。脚本自设 `LC_ALL=C`（字节模式，不依赖 UTF-8 locale；macOS 无 C.UTF-8，详见 CHANGELOG v0.2）。
 
 ## 设计原则（节选）
 

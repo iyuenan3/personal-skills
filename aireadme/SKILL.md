@@ -28,6 +28,7 @@ description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生
    - 配置：`package.json` / `Cargo.toml` / `docker-compose.yml` / `.env.example` / `CLAUDE.md`
    - `git log --oneline -20` + `git tag`（→ CHANGELOG）+ 最新 commit SHA（→ INDEX 同步锚点）。**无任何 commit**（立项/pre-code）→ 锚点暂占位，且首 commit 必须在删根前（见 Step 7）。
    - **（可选）本项目的 Claude Code 项目记忆**：若该项目在 Claude Code 用过、积累了项目记忆（路径 = 项目绝对路径每个 `/` 换 `-` → `~/.claude/projects/<dashed-path>/memory/`），读 `MEMORY.md` + 相关文件当耐久知识源。**目录不存在 → 跳过此源**（多数项目没有，正常）。
+   - **（可选）立项工作流的 pm-skills 产出**：若立项时跑过 pm-skills（愿景 / 价值主张 / 精益画布 / PRD / 假设 / pre-mortem），其长稿是**临时草稿、非要提交的 doc**；产品类项目按 STANDARD『CORE/PRD 从 pm 产物蒸馏』把结论压进 CORE + PRD 后**即弃**，不落 docs、不加文件（**不走 Step 4/7 的迁入 xor 指向**，那是给已提交 repo doc 的）。
 4. **已有文档定归属**（成熟 repo 关键，**这步只决定、不删**）：repo 已有 PRD/SPEC/INFRA/OPS/USAGE/ARCHIVE 等 → **按内容拆、不按文件名**（一个旧 doc 常跨多个 AIREADME 文件，映射见 STANDARD「旧文档迁入」）：重叠的标记**蒸馏迁入**、例外标记**指向/保留**，**绝不复制**（红线 4）。**vendored / 上游目录**（`upstream/` `vendor/` 等）：不吸收其 README/CLAUDE/LICENSE，ARCHITECTURE 记「vendored 依赖 + 指向该目录」；**上游身份若敏感 → scrub 禁词**，别写进任何 AIREADME 文件。
 5. **拷 `template/AIREADME/` 到项目根 `AIREADME/`**，逐文件按 STANDARD 填（**先把 Step 4 标「迁入」的内容迁进来；删根延到 Step 7**）：
    - 无内容的留**语义占位**（写"将放什么 + 为何空 + 现状猜测"，不留裸 TODO）。
@@ -40,14 +41,14 @@ description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生
    - **CLAUDE.md**：若已是 router（薄、只有状态/路由/红线/命令/元信息）→ 不动、仅补「维护责任」段指向 AIREADME；若臃肿 → 给瘦成 router（80–150 行）的 **diff 预览**。
    - **立项 / 无 commit 项目**：`git rm` 必须在**首 commit 立项 baseline 之后**（无 commit 就删 = 真丢失、无 git 兜底）；**首 commit 也一并提请确认、不自动执行**（遵全局「commit 仅在用户要求时」）。
    确认后才 `git rm` + 落 CLAUDE 瘦身。
-8. **写 INDEX 同步锚点**（机器可读契约，见 STANDARD「同步锚点格式」）：`last-synced: <commit SHA> · <date>` 独占一行，**SHA 必填**（立项无 commit 用 `pre-code` 哨兵），别塞 changelog / 备注，注释另起一行。update / drift 靠它算 delta。
+8. **写 INDEX 同步锚点**（机器可读契约，见 STANDARD「同步锚点格式」）：`last-synced: <commit SHA> · <date>` 独占一行，别塞 changelog / 备注，注释另起一行。update / drift 靠它算 delta。**SHA 必填**：项目已有真实 commit（含 Step 7 刚建的立项 baseline）→ 用其真 SHA（该 commit 不含本次锚点行，是无害 +1）；**唯有确无任何 commit** 才用 `pre-code` 哨兵。⚠️ pre-code 项目日后出第一个真实 commit 后，须在下次 update 把锚点从 `pre-code` 翻成真 SHA（否则 drift 雷达对 pre-code 永久跳过、AIREADME 会无声漂移）。
 9. **跑 `check.sh`**（🔴 exit 1 必修、🟡 exit 0 advisory）→ 报告：建了/实填/占位哪些、各旧 doc 迁入/指向/删根/保留、vendored 怎么处理、共享底座写进了谁、flagged 项。
 
 ## update 流程
 
 1. 读 `STANDARD.md` + 现有 `AIREADME/`，取 INDEX 的 `last-synced` SHA。
-2. `git log <SHA>..HEAD` + 看改动的 docs/code → 定哪些文件要更新（**新增 `upstream/`/`vendor/` 目录或上游身份变敏感 → 套 init Step 4 的「不吸收 vendored doc + scrub 禁词」守卫**）。
-3. 按**更新触发**改对应文件（部署变→DEPLOYMENT / 重大决策→DECISIONS / 出事→MEMORY / release→CHANGELOG / 接口变→SPEC …）。
+2. **锚点分支**：若 `last-synced` = `pre-code` 哨兵（立项后首次真实同步），**别跑 `git log pre-code..HEAD`（会 fatal）**，改用 `git log HEAD`（或空树 diff）把全部历史当 delta 逐文件填实，收尾把锚点 rebaseline 成 HEAD 真 SHA（Step 5）。否则 `git log <SHA>..HEAD` + 看改动的 docs/code → 定哪些文件要更新（**新增 `upstream/`/`vendor/` 目录或上游身份变敏感 → 套 init Step 4 的「不吸收 vendored doc + scrub 禁词」守卫**）。
+3. 按**更新触发**改对应文件（部署变→DEPLOYMENT / 重大决策→DECISIONS / 出事→MEMORY / release→CHANGELOG / 接口变→SPEC …）。**产品类**：若立项 pm-skills 草稿当时未蒸馏、或 PRD 关键假设/风险仍空 → 此刻按 STANDARD『CORE/PRD 从 pm 产物蒸馏』补齐、蒸馏后即弃（同 init Step 3）。
 4. **append-only 文件**（CHANGELOG / DECISIONS / MEMORY）**只追加，不重写历史**。
 5. 刷新 `INDEX.md` 状态表 + 把 `last-synced` 更到本次 HEAD 的 SHA（格式 `<SHA> · <date>`，见 STANDARD「同步锚点格式」；别塞 changelog 进锚点）。
 6. 跑 `check.sh`（🔴 必修）+ 报告 diff。
@@ -66,5 +67,5 @@ description: 在某个项目仓库里生成或维护它的 AIREADME/（AI 原生
 3. **append-only 文件不改历史**。
 4. **一条信息只进一个文件**（按 STANDARD 边界表）；已有文档**迁入 xor 指向，绝不复制**；**删根 doc 前内容必须先迁妥 + 走确认门**（init Step 7）。
 5. **占位语义化**（说明将写什么 + 为何空），不留裸 TODO。
-6. **导入即去链**：`[[wikilink]]` 不照抄进 AIREADME（破坏可携带性）。
+6. **导入即去链**：指向真实页面 / 内部链接的 `[[wikilink]]` 不照抄进 AIREADME（破坏可携带性）；格式示例类占位（`[[YYYY-MM-DD]]` 之类）除外，见 init Step 5 分类③。
 7. 只动当前 CWD 项目，不替别的项目写它的 AIREADME。
