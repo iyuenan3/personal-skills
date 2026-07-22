@@ -6,7 +6,7 @@ Maxwell 的 [Claude Code](https://claude.com/claude-code) skill 合集。
 
 | skill | 定位 | 受众 |
 |---|---|---|
-| [`aireadme/`](aireadme/) | AI-native 跨项目文档体系（12 文件 + 三模式 + lint） | 通用 |
+| [`aireadme/`](aireadme/) | AI-native 跨项目文档体系（12 文件 + 三模式 + lint）· ⚠️ **已迁至 [worklog-kit](https://github.com/iyuenan3/worklog-kit)**、本仓留指针 | 通用 |
 | [`story-writer/`](story-writer/) | 短篇小说创作 skill（番茄小说平台，7000-10000 字） | 通用 |
 | [`stash/`](stash/) | 对话记忆持久化到项目 memory + 校验（贴合 harness `# Memory` 规范） | 通用 |
 | [`pitfalls/`](pitfalls/) | 跨项目通用工程踩坑库（避免在新项目重踩别的项目踩过的坑） | 通用 |
@@ -22,14 +22,16 @@ Maxwell 的 [Claude Code](https://claude.com/claude-code) skill 合集。
 
 每个 skill 独立安装到 `~/.claude/skills/<name>/`，Claude Code 自动识别。
 
-### aireadme（通用）
+### aireadme（通用，已迁至 worklog-kit）
+
+canonical 维护地已迁至 [worklog-kit](https://github.com/iyuenan3/worklog-kit)，从那里安装：
 
 ```bash
-git clone https://github.com/iyuenan3/personal-skills.git
-mkdir -p ~/.claude/skills && cp -r personal-skills/aireadme ~/.claude/skills/
+git clone https://github.com/iyuenan3/worklog-kit.git
+mkdir -p ~/.claude/skills && cp -r worklog-kit/.claude/skills/aireadme ~/.claude/skills/
 ```
 
-详细用法见 [`aireadme/README.md`](aireadme/README.md)。
+本仓 [`aireadme/README.md`](aireadme/README.md) 仅留指针。
 
 ### story-writer（通用）
 
@@ -70,7 +72,7 @@ personal-skills/
 ├── README.md           # 本文件
 ├── LICENSE             # Apache-2.0（全仓共用）
 ├── CHANGELOG.md        # monorepo 顶层 changelog（仓改名 + skill 增减里程碑）
-├── aireadme/           # AI-native 跨项目文档体系 skill
+├── aireadme/           # ⚠️ 指针：canonical 已迁至 worklog-kit
 ├── story-writer/       # 短篇小说创作 skill（番茄小说平台）
 ├── stash/              # 对话记忆持久化 + 校验 skill
 ├── pitfalls/           # 跨项目通用工程踩坑库 skill
@@ -78,7 +80,7 @@ personal-skills/
 └── project-lifecycle.md # 把四个 skill 串成一条工作流的方法论
 ```
 
-各 skill 内部有独立 README（aireadme 另带内部 CHANGELOG，见 [`aireadme/CHANGELOG.md`](aireadme/CHANGELOG.md)）。
+各 skill 内部有独立 README。（aireadme 已迁 worklog-kit，其完整 CHANGELOG 见该仓。）
 
 ## 历史
 
@@ -87,6 +89,7 @@ personal-skills/
 - **2026-05-28** 加入 `story-writer`（从已删除的 `iyuenan3/OpenClaw-Customize-Skills` 仓迁入）
 - **2026-05-29** 加入 `stash`（对话记忆持久化 skill，从全局单文件 command 升级为 skill + 两轮 subagent review）
 - **2026-06-28** 加入 `pitfalls`（跨项目通用工程踩坑库 skill）+ `project-lifecycle.md`（把四个 skill 串成项目生命周期工作流的方法论）
+- **2026-07-22** `aireadme` canonical 迁至 [`worklog-kit`](https://github.com/iyuenan3/worklog-kit)（与其 project-lifecycle 工作流同源），本仓 `aireadme/` 降为指针
 
 ## License
 

@@ -4,6 +4,13 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-07-22: aireadme canonical 迁至 worklog-kit
+
+### Changed
+
+- **aireadme canonical 维护地迁至 [`worklog-kit`](https://github.com/iyuenan3/worklog-kit)**（`.claude/skills/aireadme/`）：aireadme 与 worklog-kit 的 project-lifecycle 工作流同源，统一在 kit 维护、随 kit 版本演进（迁移时 kit 侧升到 v0.4：pm 蒸馏落 CORE/PRD + 多 agent 对抗 review 加固）。
+- 本仓 `aireadme/` 降为**指针**：只留 `README.md` 指向 worklog-kit，`git rm` SKILL / STANDARD / check.sh / template / 内部 CHANGELOG（历史完整保留在 git + worklog-kit 侧）。根 README 的 skill 列表 / 安装段 / 结构图 / 历史同步更新。
+
 ## 2026-07-22: v0.7 stash 记状态（时效与变更）+ 整体 review 修复
 
 ### Added
@@ -88,5 +95,5 @@ worklog-ingest 公开镜像定位明确：**「个人工作日志 ingest 方法�
 
 ## 2026-05-25: v0.1 aireadme 首发
 
-- aireadme skill 首个公开版本（详见 [`aireadme/CHANGELOG.md`](aireadme/CHANGELOG.md)）
+- aireadme skill 首个公开版本（现完整 CHANGELOG 见 [worklog-kit 侧 `aireadme/CHANGELOG.md`](https://github.com/iyuenan3/worklog-kit/blob/main/.claude/skills/aireadme/CHANGELOG.md)）
 - 当时仓名 `aireadme-skill`，monorepo 化后迁入子目录。
