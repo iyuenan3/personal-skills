@@ -4,11 +4,20 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/)。
 
+## 2026-07-30: Codex / Claude Code 双兼容与 canonical 收敛
+
+### Changed
+
+- `story-writer` 保留为本仓唯一完整 Skill，补齐 Codex `agents/openai.yaml`、项目级 `.agents/skills/` 发现入口与 Claude 兼容软链接。
+- `stash` / `pitfalls` / `worklog-ingest` 与 project-lifecycle canonical 全部收敛到 [`worklog-kit`](https://github.com/iyuenan3/worklog-kit)；原目录改为安装指针。
+- 迁移前的三份 Skill 实现与方法论全文完整冻结到 `legacy/claude-era/`，不删除公开历史，也不再作为当前 Skill 发现。
+- 新增共用 `AGENTS.md`，`CLAUDE.md` 作为兼容软链接；根 README 改为 Codex / Claude Code 并列安装说明。
+
 ## 2026-07-22: aireadme canonical 迁至 worklog-kit
 
 ### Changed
 
-- **aireadme canonical 维护地迁至 [`worklog-kit`](https://github.com/iyuenan3/worklog-kit)**（`.claude/skills/aireadme/`）：aireadme 与 worklog-kit 的 project-lifecycle 工作流同源，统一在 kit 维护、随 kit 版本演进（迁移时 kit 侧升到 v0.4：pm 蒸馏落 CORE/PRD + 多 agent 对抗 review 加固）。
+- **aireadme canonical 维护地迁至 [`worklog-kit`](https://github.com/iyuenan3/worklog-kit)**（迁移当时位于 `.claude/skills/aireadme/`，现位于 `.agents/skills/aireadme/`）：aireadme 与 worklog-kit 的 project-lifecycle 工作流同源，统一在 kit 维护、随 kit 版本演进（迁移时 kit 侧升到 v0.4：pm 蒸馏落 CORE/PRD + 多 agent 对抗 review 加固）。
 - 本仓 `aireadme/` 降为**指针**：只留 `README.md` 指向 worklog-kit，`git rm` SKILL / STANDARD / check.sh / template / 内部 CHANGELOG（历史完整保留在 git + worklog-kit 侧）。根 README 的 skill 列表 / 安装段 / 结构图 / 历史同步更新。
 
 ## 2026-07-22: v0.7 stash 记状态（时效与变更）+ 整体 review 修复
@@ -95,5 +104,5 @@ worklog-ingest 公开镜像定位明确：**「个人工作日志 ingest 方法�
 
 ## 2026-05-25: v0.1 aireadme 首发
 
-- aireadme skill 首个公开版本（现完整 CHANGELOG 见 [worklog-kit 侧 `aireadme/CHANGELOG.md`](https://github.com/iyuenan3/worklog-kit/blob/main/.claude/skills/aireadme/CHANGELOG.md)）
+- aireadme skill 首个公开版本（后续演进见 [worklog-kit `AIREADME/CHANGELOG.md`](https://github.com/iyuenan3/worklog-kit/blob/main/AIREADME/CHANGELOG.md)）
 - 当时仓名 `aireadme-skill`，monorepo 化后迁入子目录。

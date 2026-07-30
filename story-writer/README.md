@@ -1,6 +1,6 @@
 # story-writer
 
-短篇小说创作 [Claude Code](https://claude.com/claude-code) skill（目标平台：番茄小说，字数 7000-10000 字）。
+短篇小说创作 Skill，支持 Codex 与 Claude Code（目标平台：番茄小说，字数 7000-10000 字）。
 
 ## 触发词
 
@@ -31,7 +31,9 @@
 
 ```bash
 git clone https://github.com/iyuenan3/personal-skills.git
-cp -r personal-skills/story-writer ~/.claude/skills/
+mkdir -p ~/.agents/skills ~/.claude/skills
+cp -R personal-skills/story-writer ~/.agents/skills/
+ln -s ../../.agents/skills/story-writer ~/.claude/skills/story-writer
 ```
 
 ## License
@@ -40,4 +42,4 @@ cp -r personal-skills/story-writer ~/.claude/skills/
 
 ## 历史
 
-2026-03-28 创建于 `iyuenan3/OpenClaw-Customize-Skills`（OpenClaw 时代的 skill 集合仓），2026-05-28 迁入本 monorepo（老仓已删除）。SKILL.md 早期已被改造为 Claude Code skill 格式（`name:` / `description:` frontmatter），迁移时无需 port。
+2026-03-28 创建于 `iyuenan3/OpenClaw-Customize-Skills`（OpenClaw 时代的 Skill 集合仓），2026-05-28 迁入本 monorepo（老仓已删除），2026-07-30 补齐 Codex 元数据与双客户端安装方式。

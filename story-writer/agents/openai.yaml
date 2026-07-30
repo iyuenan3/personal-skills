@@ -1,0 +1,4 @@
+interface:
+  display_name: "Story Writer"
+  short_description: "创作并校验 7000 至 10000 字番茄短篇小说"
+  default_prompt: "Use $story-writer to create a complete short story from this premise."
